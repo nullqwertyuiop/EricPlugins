@@ -16,6 +16,7 @@ class ModuleMetadata(BaseModel):
     version: str = "0.1.0"
     pack: str
     authors: list[str] = []
+    required: list[str] = []
     description: str = ""
     category: list[str] = []
     advanced: ModuleAdvancedSetting = ModuleAdvancedSetting()
