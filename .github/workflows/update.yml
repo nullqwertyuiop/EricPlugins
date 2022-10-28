@@ -1,0 +1,31 @@
+name: Update Modules
+
+on:
+  push:
+    branches: ["main"]
+
+  workflow_dispatch:
+
+jobs:
+  Update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4.2.0
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r __workflow__/requirements.txt
+          pip install black
+
+      - name: Format code
+        run: black .
+
+      - name: Update modules metadata
+        run: python __workflow__/main.py
