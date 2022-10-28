@@ -1,0 +1,20 @@
+{
+    "name": "吃什么",
+    "version": "0.1.0",
+    "pack": "module.what_to_eat",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "随机抽取餐点，支持自定义抽数",
+    "category": [
+        "utility:实用工具",
+        "food:美食",
+        "random:随机"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
