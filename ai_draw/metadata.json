@@ -1,0 +1,19 @@
+{
+    "name": "AI 画图",
+    "version": "0.1.0",
+    "pack": "module.ai_draw",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [
+        "library.module.file_server"
+    ],
+    "description": "利用 Stable Diffusion 生成图片",
+    "category": [],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
