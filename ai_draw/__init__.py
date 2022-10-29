@@ -56,7 +56,7 @@ async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexRes
     url: str = content.result.display
     url = url.lstrip("http://").lstrip("https://").rstrip("/")
     url = f"wss://{url}/queue/join"
-    module.sd_webui.util.SD_URL = url
+    module.ai_draw.util.SD_URL = url
     await send_message(event, MessageChain(f"已设置为 {url}"), app.account)
 
 

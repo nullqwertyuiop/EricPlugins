@@ -5,10 +5,8 @@ from datetime import datetime
 
 import aiohttp
 from graia.ariadne.message.chain import MessageChain
-from kayaku import create
 from loguru import logger
 
-from library.model.config.service.fastapi import FastAPIConfig
 from library.module.file_server.util import serve_file, get_link
 from library.util.orm import orm
 from module.ai_draw.table import StableDiffusionHistory
