@@ -46,7 +46,7 @@ async def what_to_eat_direct(app: Ariadne, event: MessageEvent):
     )
 )
 @decorate(Switch.check(channel.module), Distribution.distribute(), Blacklist.check())
-async def what_to_eat_direct(app: Ariadne, event: MessageEvent, amount: RegexResult):
+async def what_to_eat_custom(app: Ariadne, event: MessageEvent, amount: RegexResult):
     amount: int = int(amount.result.display)
     if amount > 10:
         return await send_message(

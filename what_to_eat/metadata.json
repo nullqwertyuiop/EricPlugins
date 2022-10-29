@@ -5,6 +5,7 @@
     "authors": [
         "nullqwertyuiop"
     ],
+    "required": [],
     "description": "随机抽取餐点，支持自定义抽数",
     "category": [
         "utility:实用工具",
