@@ -32,6 +32,12 @@ async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexRes
     content: str = content.result.display
     field = int(event.sender.group) if isinstance(event, GroupMessage) else 0
     supplicant = int(event.sender)
+    await send_message(
+        event,
+        MessageChain("已加入等候队列，请坐和放宽"),
+        app.account,
+        quote=event.message_chain,
+    )
     msg = await render(field, supplicant, content)
     await send_message(event, msg, app.account, quote=event.message_chain)
 
@@ -57,4 +63,6 @@ async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexRes
     url = url.lstrip("http://").lstrip("https://").rstrip("/")
     url = f"wss://{url}/queue/join"
     module.ai_draw.util.SD_URL = url
-    await send_message(event, MessageChain(f"已设置为 {url}"), app.account, quote=event.message_chain)
+    await send_message(
+        event, MessageChain(f"已设置为 {url}"), app.account, quote=event.message_chain
+    )
