@@ -5,19 +5,20 @@ from datetime import datetime
 
 import aiohttp
 from graia.ariadne.message.chain import MessageChain
+from kayaku import create
 from loguru import logger
 
 from library.module.file_server.util import serve_file, get_link
 from library.util.misc import seconds_to_string
 from library.util.orm import orm
+from module.ai_draw.config import AIDrawConfig
 from module.ai_draw.table import StableDiffusionHistory
 
 lock = Lock()
 SD_URL: str = ""
-DEFAULT_LIFESPAN: int = 60 * 60
 
 
-async def _communicate(positive: str, session: str) -> str:
+async def _run_txt2img(positive: str, session: str) -> str:
     async with lock:
         logger.info(f"{session}: 取得锁")
         try:
@@ -105,15 +106,16 @@ async def _insert(field: int, supplicant: int, positive: str, uuid: str):
     )
 
 
-async def render(field: int, supplicant: int, positive: str) -> MessageChain:
+async def txt2img(field: int, supplicant: int, positive: str) -> MessageChain:
     session = "".join(random.choices(string.ascii_uppercase + string.digits, k=9))
+    cfg: AIDrawConfig = create(AIDrawConfig, flush=True)
     try:
-        content = await _communicate(positive, session)
+        content = await _run_txt2img(positive, session)
     except Exception as e:  # noqa
         # Already logged, just pass
         return MessageChain('出现错误，可能是 SD 链接失效\n可使用 "[前缀]设置 sd 链接 <链接>" 重新设置')
-    uuid = await _serve(content, session, DEFAULT_LIFESPAN)
+    uuid = await _serve(content, session, cfg.default_lifespan)
     await _insert(field, supplicant, positive, uuid)
     return MessageChain(
-        f"生成结果：{get_link(uuid)}\n生命周期：{seconds_to_string(DEFAULT_LIFESPAN)}"
+        f"生成结果：{get_link(uuid)}\n生命周期：{seconds_to_string(cfg.default_lifespan)}"
     )

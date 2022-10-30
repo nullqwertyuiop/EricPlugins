@@ -20,7 +20,7 @@ from library.decorator.switch import Switch
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
-from module.ai_draw.util import render
+from module.ai_draw.util import txt2img
 
 channel = Channel.current()
 
@@ -38,7 +38,7 @@ async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexRes
         app.account,
         quote=event.message_chain,
     )
-    msg = await render(field, supplicant, content)
+    msg = await txt2img(field, supplicant, content)
     await send_message(event, msg, app.account, quote=event.message_chain)
 
 
