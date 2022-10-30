@@ -33,7 +33,7 @@ async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexRes
     field = int(event.sender.group) if isinstance(event, GroupMessage) else 0
     supplicant = int(event.sender)
     msg = await render(field, supplicant, content)
-    await send_message(event, msg, app.account)
+    await send_message(event, msg, app.account, quote=event.message_chain)
 
 
 @listen(GroupMessage, FriendMessage)
@@ -57,11 +57,4 @@ async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexRes
     url = url.lstrip("http://").lstrip("https://").rstrip("/")
     url = f"wss://{url}/queue/join"
     module.ai_draw.util.SD_URL = url
-    await send_message(event, MessageChain(f"已设置为 {url}"), app.account)
-
-
-@listen(GroupMessage, FriendMessage)
-@dispatch(Twilight(PrefixMatch(), FullMatch("test"), WildcardMatch() @ "content"))
-@decorate(Switch.check(channel.module), Distribution.distribute(), Blacklist.check())
-async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexResult):
-    await send_message(event, MessageChain("test"), app.account)
+    await send_message(event, MessageChain(f"已设置为 {url}"), app.account, quote=event.message_chain)

@@ -8,11 +8,13 @@ from graia.ariadne.message.chain import MessageChain
 from loguru import logger
 
 from library.module.file_server.util import serve_file, get_link
+from library.util.misc import seconds_to_string
 from library.util.orm import orm
 from module.ai_draw.table import StableDiffusionHistory
 
 lock = Lock()
 SD_URL: str = ""
+DEFAULT_LIFESPAN: int = 60 * 60
 
 
 async def _communicate(positive: str, session: str) -> str:
@@ -86,8 +88,10 @@ async def _communicate(positive: str, session: str) -> str:
             raise
 
 
-async def _serve(content: str, session: str) -> str:
-    return await serve_file(content.encode("utf-8"), f"{session}.html")
+async def _serve(content: str, session: str, lifespan: int) -> str:
+    return await serve_file(
+        content.encode("utf-8"), f"{session}.html", lifespan=lifespan
+    )
 
 
 async def _insert(field: int, supplicant: int, positive: str, uuid: str):
@@ -108,6 +112,8 @@ async def render(field: int, supplicant: int, positive: str) -> MessageChain:
     except Exception as e:  # noqa
         # Already logged, just pass
         return MessageChain('出现错误，可能是 SD 链接失效\n可使用 "[前缀]设置 sd 链接 <链接>" 重新设置')
-    uuid = await _serve(content, session)
+    uuid = await _serve(content, session, DEFAULT_LIFESPAN)
     await _insert(field, supplicant, positive, uuid)
-    return MessageChain(get_link(uuid))
+    return MessageChain(
+        f"生成结果：{get_link(uuid)}\n生命周期：{seconds_to_string(DEFAULT_LIFESPAN)}"
+    )
