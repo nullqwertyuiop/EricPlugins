@@ -1,6 +1,6 @@
 {
     "name": "短信转发器",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "pack": "module.sms_forward",
     "authors": [
         "nullqwertyuiop"

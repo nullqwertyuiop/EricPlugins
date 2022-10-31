@@ -48,7 +48,6 @@ def _gen_msg_notification(content: list[str]) -> str:
     title = []
     body = []
     for part in content:
-        print(part)
         if part.startswith("body="):
             is_title = False
         title.append(part) if is_title else body.append(part)
