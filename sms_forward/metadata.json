@@ -1,0 +1,20 @@
+{
+    "name": "短信转发器",
+    "version": "0.1.0",
+    "pack": "module.sms_forward",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [],
+    "description": "转发短信",
+    "category": [
+        "network:网络",
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
