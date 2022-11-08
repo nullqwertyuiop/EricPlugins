@@ -62,7 +62,7 @@ async def twitter_preview(app: Ariadne, event: MessageEvent):
             Forward(
                 [
                     ForwardNode(
-                        target=config.account,
+                        target=app.account,
                         name=f"{config.name}#{config.num}",
                         time=datetime.now(),
                         message=msg,
