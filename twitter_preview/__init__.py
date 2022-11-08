@@ -6,11 +6,12 @@ from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEven
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image, ForwardNode, Forward
 from graia.ariadne.message.parser.twilight import Twilight, WildcardMatch, RegexMatch
+from graia.ariadne.util.saya import decorate, dispatch, listen
 from graia.saya import Channel
-from graia.saya.builtins.broadcast import ListenerSchema
 from kayaku import create
 
 from library.decorator.blacklist import Blacklist
+from library.decorator.distribute import Distribution
 from library.decorator.function_call import FunctionCall
 from library.decorator.switch import Switch
 from library.model.config.eric import EricConfig
@@ -20,27 +21,24 @@ from module.twitter_preview.util import get_status_id, query
 channel = Channel.current()
 
 
-@channel.use(
-    ListenerSchema(
-        listening_events=[GroupMessage, FriendMessage],
-        inline_dispatchers=[
-            Twilight(
-                [
-                    WildcardMatch().flags(re.S),
-                    RegexMatch(
-                        r"((?:https?://)?(?:www\.)?twitter\.com/[\w\d]+/status/(\d+))|"
-                        r"((?:https?://)?(?:www\.)?(t\.co/[a-zA-Z\d_.-]{10}))"
-                    ),
-                    WildcardMatch(),
-                ]
-            )
-        ],
-        decorators=[
-            Switch.check(channel.module),
-            Blacklist.check(),
-            FunctionCall.record(channel.module),
-        ],
+@listen(GroupMessage, FriendMessage)
+@dispatch(
+    Twilight(
+        [
+            WildcardMatch().flags(re.S),
+            RegexMatch(
+                r"((?:https?://)?(?:www\.)?twitter\.com/[\w\d]+/status/(\d+))|"
+                r"((?:https?://)?(?:www\.)?(t\.co/[a-zA-Z\d_.-]{10}))"
+            ),
+            WildcardMatch(),
+        ]
     )
+)
+@decorate(
+    Switch.check(channel.module),
+    Distribution.distribute(),
+    Blacklist.check(),
+    FunctionCall.record(channel.module),
 )
 async def twitter_preview(app: Ariadne, event: MessageEvent):
     if not (ids := await get_status_id(event.message_chain.display)):
