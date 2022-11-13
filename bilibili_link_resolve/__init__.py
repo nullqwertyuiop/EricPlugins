@@ -128,9 +128,6 @@ def get_page(data: dict) -> Page:
             GenericBoxItem(text="简介", description=str(data["desc"])),
         ),
         GenericBox(
-            GenericBoxItem(text="简介", description=str(data["desc"])),
-        ),
-        GenericBox(
             GenericBoxItem(text="播放量", description=str(data["stat"].get("view", ""))),
             GenericBoxItem(
                 text="弹幕量", description=str(data["stat"].get("danmaku", ""))
