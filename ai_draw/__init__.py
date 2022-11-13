@@ -17,6 +17,7 @@ from library.decorator.blacklist import Blacklist
 from library.decorator.distribute import Distribution
 from library.decorator.permission import Permission
 from library.decorator.switch import Switch
+from library.decorator.timer import timer
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
@@ -28,6 +29,7 @@ channel = Channel.current()
 @listen(GroupMessage, FriendMessage)
 @dispatch(Twilight(PrefixMatch(), FullMatch("生成图片"), WildcardMatch() @ "content"))
 @decorate(Switch.check(channel.module), Distribution.distribute(), Blacklist.check())
+@timer(channel.module)
 async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexResult):
     content: str = content.result.display
     field = int(event.sender.group) if isinstance(event, GroupMessage) else 0
@@ -36,10 +38,10 @@ async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexRes
         event,
         MessageChain("已加入等候队列，请坐和放宽"),
         app.account,
-        quote=event.message_chain,
+        quote=event.source,
     )
     msg = await txt2img(field, supplicant, content)
-    await send_message(event, msg, app.account, quote=event.message_chain)
+    await send_message(event, msg, app.account, quote=event.source)
 
 
 @listen(GroupMessage, FriendMessage)
@@ -64,5 +66,5 @@ async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexRes
     url = f"wss://{url}/queue/join"
     module.ai_draw.util.SD_URL = url
     await send_message(
-        event, MessageChain(f"已设置为 {url}"), app.account, quote=event.message_chain
+        event, MessageChain(f"已设置为 {url}"), app.account, quote=event.source
     )
