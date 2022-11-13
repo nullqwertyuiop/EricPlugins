@@ -60,13 +60,15 @@ async def image_searcher(
     event: MessageEvent,
     image: ElementResult,
 ):
-    if (quote := event.quote) and (images := await _get_image_from_quote(app, quote, event)):
+    if (quote := event.quote) and (
+        images := await _get_image_from_quote(app, quote, event)
+    ):
         image = images[0].url
     elif not image.matched:
+        bot_msg = await send_message(
+            event, MessageChain("请在 30s 内发送要处理的图片"), app.account, quote=event.source
+        )
         try:
-            await send_message(
-                event, MessageChain("请在 30s 内发送要处理的图片"), app.account, quote=event.source
-            )
             if not (
                 image := await inc.wait(
                     GroupImageWaiter(event.sender.group, event.sender, force=True)
@@ -75,15 +77,18 @@ async def image_searcher(
                     timeout=30,
                 )
             ):
+                await app.recall_message(bot_msg)
                 return await send_message(
                     event,
                     MessageChain("未检测到图片，请重新发送，进程退出"),
                     app.account,
                     quote=event.source,
                 )
+            await app.recall_message(bot_msg)
             image = image.url
 
         except asyncio.TimeoutError:
+            await app.recall_message(bot_msg)
             return await send_message(
                 event,
                 MessageChain("图片等待超时，进程退出"),
@@ -92,7 +97,7 @@ async def image_searcher(
             )
     else:
         image = image.result.url  # type: ignore
-    await send_message(
+    bot_msg = await send_message(
         event,
         MessageChain("已收到图片，正在进行搜索..."),
         app.account,
@@ -105,6 +110,13 @@ async def image_searcher(
         for engine in __engines__.values()
     ]
     msgs = await asyncio.gather(*tasks)
+    await app.recall_message(bot_msg)
+
+    bot_msg = await send_message(
+        event,
+        MessageChain("已完成搜索，正在发送结果..."),
+        app.account,
+    )
     await send_message(
         event,
         MessageChain(
@@ -124,6 +136,7 @@ async def image_searcher(
         ),
         app.account,
     )
+    await app.recall_message(bot_msg)
 
 
 async def _get_image_from_quote(app: Ariadne, quote: Quote, event: MessageEvent):
