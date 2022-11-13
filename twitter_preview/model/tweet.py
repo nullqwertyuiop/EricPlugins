@@ -3,9 +3,10 @@ from datetime import datetime
 from io import BytesIO
 
 import youtube_dl
-from PIL import Image
+from PIL import Image as PillowImage
 from aiohttp import ClientSession
 from graia.ariadne.message.chain import MessageChain
+from graia.ariadne.message.element import Image
 from kayaku import create
 from loguru import logger
 from pydantic import BaseModel
@@ -147,7 +148,7 @@ class ParsedTweet(UnparsedTweet):
     async def get_page(self, banner_text: str = "Twitter 预览") -> Page:
         logger.info(f"取得推文 {self.id} 图片中...")
         images: list[bytes] = await self.get_images()
-        _avatar: Image.Image = Image.open(BytesIO(await self.user.get_avatar()))
+        _avatar: PillowImage.Image = PillowImage.open(BytesIO(await self.user.get_avatar()))
 
         page = Page(
             Banner(banner_text),
@@ -228,11 +229,13 @@ class ParsedTweet(UnparsedTweet):
 
     async def generate_message(self) -> MessageChain:
         page = await self.get_page()
-        uuid = await serve_file(
-            page.to_html().encode("utf-8"), f"{self.id}.html", lifespan=DEFAULT_LIFESPAN
-        )
-        url = get_link(uuid)
-        return MessageChain(
-            f"已解析推文 {self.id}，请点击链接查看：{url}\n"
-            f"生命周期：{seconds_to_string(DEFAULT_LIFESPAN)}"
-        )
+        if self.has_video:
+            uuid = await serve_file(
+                page.to_html().encode("utf-8"), f"{self.id}.html", lifespan=DEFAULT_LIFESPAN
+            )
+            url = get_link(uuid)
+            return MessageChain(
+                f"已解析推文 {self.id}，请点击链接查看：{url}\n"
+                f"生命周期：{seconds_to_string(DEFAULT_LIFESPAN)}"
+            )
+        return MessageChain(Image(data_bytes=await page.render()))
