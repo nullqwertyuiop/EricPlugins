@@ -1,4 +1,5 @@
-import random
+import re
+from contextlib import suppress
 
 from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
@@ -12,7 +13,6 @@ from graia.ariadne.message.parser.twilight import (
 from graia.ariadne.util.saya import listen, dispatch, decorate
 from graia.saya import Channel
 
-import module.ai_draw.util
 from library.decorator.blacklist import Blacklist
 from library.decorator.distribute import Distribution
 from library.decorator.permission import Permission
@@ -21,26 +21,58 @@ from library.decorator.timer import timer
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
-from module.ai_draw.util import txt2img
+from module.ai_draw.util import txt2img, parse_msg, _Store
 
 channel = Channel.current()
 
 
 @listen(GroupMessage, FriendMessage)
-@dispatch(Twilight(PrefixMatch(), FullMatch("生成图片"), WildcardMatch() @ "content"))
+@dispatch(
+    Twilight(PrefixMatch(), FullMatch("生成图片"), WildcardMatch().flags(re.S) @ "content")
+)
 @decorate(Switch.check(channel.module), Distribution.distribute(), Blacklist.check())
 @timer(channel.module)
 async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexResult):
     content: str = content.result.display
     field = int(event.sender.group) if isinstance(event, GroupMessage) else 0
     supplicant = int(event.sender)
-    await send_message(
+    positive, negative, steps, method, cfg = parse_msg(content)
+
+    if steps > 250:
+        return await send_message(
+            event, MessageChain("步数过多"), app.account, quote=event.source
+        )
+
+    if cfg < 0:
+        return await send_message(
+            event, MessageChain("CFG 配置错误"), app.account, quote=event.source
+        )
+
+    if method not in ["Euler a", "Euler b", "Euler c", "RK4"]:
+        return await send_message(
+            event,
+            MessageChain("方法配置错误，可选：Euler a, Euler b, Euler c, RK4"),
+            app.account,
+            quote=event.source,
+        )
+
+    wait_msg = await send_message(
         event,
         MessageChain("已加入等候队列，请坐和放宽"),
         app.account,
         quote=event.source,
     )
-    msg = await txt2img(field, supplicant, content)
+    msg = await txt2img(
+        field,
+        supplicant,
+        positive,
+        negative,
+        steps,
+        method,
+        cfg,
+    )
+    with suppress(Exception):
+        await app.recall_message(wait_msg)
     await send_message(event, msg, app.account, quote=event.source)
 
 
@@ -62,9 +94,9 @@ async def sd_webui_generate(app: Ariadne, event: MessageEvent, content: RegexRes
 )
 async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexResult):
     url: str = content.result.display
-    url = url.lstrip("http://").lstrip("https://").rstrip("/")
+    url = url.lstrip("http://").lstrip("https://").rstrip("/")  # noqa
     url = f"wss://{url}/queue/join"
-    module.ai_draw.util.SD_URL = url
+    _Store.SD_URL = url
     await send_message(
         event, MessageChain(f"已设置为 {url}"), app.account, quote=event.source
     )
