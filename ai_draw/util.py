@@ -25,10 +25,6 @@ from module.ai_draw.table import StableDiffusionHistory
 lock = Lock()
 
 
-class _Store:
-    SD_URL: str = ""
-
-
 def parse_msg(msg: str) -> tuple[str, str, int, str, float]:
     lines = msg.splitlines()
     positive = None
@@ -76,7 +72,7 @@ async def _run_txt2img(
         start_time = time.perf_counter()
         try:
             async with aiohttp.ClientSession() as s:
-                async with s.ws_connect(_Store.SD_URL) as ws:
+                async with s.ws_connect(create(AIDrawConfig).url) as ws:
                     await ws.send_json(
                         {
                             "fn_index": 51,
@@ -180,7 +176,7 @@ def _get_page(
         GenericBox(
             GenericBoxItem(
                 text="Time Elapsed",
-                description=seconds_to_string(int(_ := time_cost))
+                description=seconds_to_string(_ := int(time_cost))
                 + f" {time_cost - _:0.2f} 毫秒",
             )
         ),

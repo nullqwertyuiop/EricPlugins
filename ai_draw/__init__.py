@@ -1,6 +1,7 @@
 import re
 from contextlib import suppress
 
+import kayaku
 from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
 from graia.ariadne.message.chain import MessageChain
@@ -12,6 +13,7 @@ from graia.ariadne.message.parser.twilight import (
 )
 from graia.ariadne.util.saya import listen, dispatch, decorate
 from graia.saya import Channel
+from kayaku import create
 
 from library.decorator.blacklist import Blacklist
 from library.decorator.distribute import Distribution
@@ -21,7 +23,8 @@ from library.decorator.timer import timer
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
-from module.ai_draw.util import txt2img, parse_msg, _Store
+from module.ai_draw.config import AIDrawConfig
+from module.ai_draw.util import txt2img, parse_msg
 
 channel = Channel.current()
 
@@ -96,7 +99,9 @@ async def sd_webui_set_link(app: Ariadne, event: MessageEvent, content: RegexRes
     url: str = content.result.display
     url = url.lstrip("http://").lstrip("https://").rstrip("/")  # noqa
     url = f"wss://{url}/queue/join"
-    _Store.SD_URL = url
+    cfg: AIDrawConfig = create(AIDrawConfig)
+    cfg.url = url
+    kayaku.save(AIDrawConfig)
     await send_message(
         event, MessageChain(f"已设置为 {url}"), app.account, quote=event.source
     )

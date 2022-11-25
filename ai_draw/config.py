@@ -11,5 +11,8 @@ class AIDrawConfig:
     default_lifespan: int = 60 * 10
     """ 保存文件默认生命周期（秒） """
 
+    url: str = ""
+    """ StableDiffusion 服务地址 """
+
 
 create(AIDrawConfig)
