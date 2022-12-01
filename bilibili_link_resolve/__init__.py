@@ -92,7 +92,7 @@ async def get_info(av: int):
 
 
 def bv_to_av(bv: str) -> int:
-    table = "fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF"
+    table = "fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF"  # noqa
     tr = {table[i]: i for i in range(58)}
     s = [11, 10, 3, 8, 4, 6]
     xor = 177451812
@@ -130,7 +130,7 @@ def get_page(data: dict) -> Page:
         GenericBox(
             GenericBoxItem(text="播放量", description=str(data["stat"].get("view", ""))),
             GenericBoxItem(
-                text="弹幕量", description=str(data["stat"].get("danmaku", ""))
+                text="弹幕量", description=str(data["stat"].get("danmaku", ""))  # noqa
             ),
             GenericBoxItem(text="评论量", description=str(data["stat"].get("reply", ""))),
             GenericBoxItem(text="点赞量", description=str(data["stat"].get("like", ""))),
@@ -142,6 +142,6 @@ def get_page(data: dict) -> Page:
         ),
         GenericBox(
             GenericBoxItem(text="AV 号", description=str("av" + str(data["aid"]))),
-            GenericBoxItem(text="BV 号", description=str(data["bvid"])),
+            GenericBoxItem(text="BV 号", description=str(data["bvid"])),  # noqa
         ),
     )
