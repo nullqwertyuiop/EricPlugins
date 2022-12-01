@@ -14,9 +14,7 @@ from loguru import logger
 
 from library.module.file_server.util import serve_file, get_link
 from library.ui import Page
-from library.ui.element.banner import Banner
-from library.ui.element.box.generic import GenericBox, GenericBoxItem
-from library.ui.element.box.image import ImageBox
+from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox
 from library.util.misc import seconds_to_string
 from library.util.orm import orm
 from module.ai_draw.config import AIDrawConfig

@@ -1,6 +1,6 @@
 {
     "name": "AI 画图",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "pack": "module.ai_draw",
     "authors": [
         "nullqwertyuiop"

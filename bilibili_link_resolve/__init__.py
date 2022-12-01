@@ -21,9 +21,7 @@ from library.decorator.function_call import FunctionCall
 from library.decorator.switch import Switch
 from library.decorator.timer import timer
 from library.ui import Page
-from library.ui.element.banner import Banner
-from library.ui.element.box.generic import GenericBox, GenericBoxItem
-from library.ui.element.box.image import ImageBox
+from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox
 from library.util.message import send_message
 from library.util.misc import seconds_to_string
 
