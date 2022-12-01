@@ -19,10 +19,9 @@ from library.ui.element.box.generic import GenericBox, GenericBoxItem
 from library.ui.element.box.image import ImageBox
 from library.ui.element.box.video import VideoBox
 from library.util.misc import seconds_to_string
+from module.twitter_preview.model.config import TwitterPreviewConfig
 from module.twitter_preview.model.include import Photo, Video, AnimatedGif, User
 from module.twitter_preview.var import STATUS_LINK
-
-DEFAULT_LIFESPAN = 60 * 60 * 24
 
 
 class Attachments(BaseModel):
@@ -104,9 +103,7 @@ class ParsedTweet(UnparsedTweet):
 
     @property
     def has_video(self) -> bool:
-        return bool(
-            list(filter(lambda x: isinstance(x, (Video, AnimatedGif)), self.media))
-        )
+        return bool(list(filter(lambda x: isinstance(x, Video), self.media)))
 
     @property
     def has_animation(self) -> bool:
@@ -116,13 +113,9 @@ class ParsedTweet(UnparsedTweet):
         images: list[bytes] = []
         async with ClientSession() as session:
             for media in self.media:
-                url = None
-                if isinstance(media, Photo):
-                    url = media.url
-                elif isinstance(media, (Video, AnimatedGif)):
-                    url = media.preview_image_url
-                if not url:
+                if not isinstance(media, Photo):
                     continue
+                url = media.url
                 config: EricConfig = create(EricConfig)
                 async with session.get(url, proxy=config.proxy) as resp:
                     images.append(await resp.read())
@@ -146,9 +139,12 @@ class ParsedTweet(UnparsedTweet):
                 return await resp.read(), f"{info['display_id']}.{info['ext']}"
 
     async def get_page(self, banner_text: str = "Twitter 预览") -> Page:
+        config: TwitterPreviewConfig = create(TwitterPreviewConfig)
         logger.info(f"取得推文 {self.id} 图片中...")
         images: list[bytes] = await self.get_images()
-        _avatar: PillowImage.Image = PillowImage.open(BytesIO(await self.user.get_avatar()))
+        _avatar: PillowImage.Image = PillowImage.open(
+            BytesIO(await self.user.get_avatar())
+        )
 
         page = Page(
             Banner(banner_text),
@@ -156,23 +152,22 @@ class ParsedTweet(UnparsedTweet):
                 GenericBoxItem(
                     text=self.user.name,
                     description=self.user.username,
-                    # icon=avatar
                 )
             ),
+            title=f"Twitter 预览 - {self.user.name}",
         )
 
-        if self.has_video:
+        page.add(*[ImageBox.from_bytes(image) for image in images])
+        if self.has_video or self.has_animation:
             video, filename = await self.get_video_bytes()
-            url = get_link(await serve_file(video, filename, lifespan=DEFAULT_LIFESPAN))
+            url = get_link(await serve_file(video, filename, lifespan=config.lifespan))
             page.add(
                 VideoBox(
                     url=f"http://{url}",  # noqa
-                    loop=self.has_animation,
-                    controls=not self.has_animation,
+                    loop=False,
+                    controls=True,
                 )
             )
-        else:
-            page.add(*[ImageBox.from_bytes(image) for image in images])
 
         page.add(
             GenericBox(
@@ -180,7 +175,7 @@ class ParsedTweet(UnparsedTweet):
             ),
         )
 
-        if hashtags := self.entities.hashtags:
+        if config.metrics.tags and (hashtags := self.entities.hashtags):
             page.add(
                 GenericBox(
                     GenericBoxItem(
@@ -192,50 +187,64 @@ class ParsedTweet(UnparsedTweet):
                 )
             )
 
-        page.add(
-            GenericBox()
-            .add(
-                GenericBoxItem(
-                    text="转推", description=str(self.public_metrics.retweet_count)
+        if config.metrics.retweet:
+            page.add(
+                GenericBox().add(
+                    GenericBoxItem(
+                        text="转推", description=str(self.public_metrics.retweet_count)
+                    )
                 )
             )
-            .add(
+        if config.metrics.reply:
+            page.add(
                 GenericBoxItem(
                     text="回复", description=str(self.public_metrics.reply_count)
                 )
             )
-            .add(
+        if config.metrics.like:
+            page.add(
                 GenericBoxItem(
                     text="点赞", description=str(self.public_metrics.like_count)
                 )
             )
-            .add(
+        if config.metrics.quote:
+            page.add(
                 GenericBoxItem(
                     text="引用", description=str(self.public_metrics.quote_count)
                 )
             ),
-            GenericBox(
+        time_box = []
+        if config.metrics.create_time:
+            time_box.append(
                 GenericBoxItem(
                     text="发布时间",
                     description=self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                ),
+                )
+            )
+        if config.metrics.fetch_time:
+            time_box.append(
                 GenericBoxItem(
                     text="制图时间",
                     description=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 ),
-            ),
-        )
+            )
+        if time_box:
+            page.add(GenericBox(*time_box))
+
         return page
 
     async def generate_message(self) -> MessageChain:
+        config: TwitterPreviewConfig = create(TwitterPreviewConfig)
         page = await self.get_page()
         if self.has_video:
             uuid = await serve_file(
-                page.to_html().encode("utf-8"), f"{self.id}.html", lifespan=DEFAULT_LIFESPAN
+                page.to_html().encode("utf-8"),
+                f"{self.id}.html",
+                lifespan=config.lifespan,
             )
             url = get_link(uuid)
             return MessageChain(
                 f"已解析推文 {self.id}，请点击链接查看：{url}\n"
-                f"生命周期：{seconds_to_string(DEFAULT_LIFESPAN)}"
+                f"生命周期：{seconds_to_string(config.lifespan)}"
             )
         return MessageChain(Image(data_bytes=await page.render()))
