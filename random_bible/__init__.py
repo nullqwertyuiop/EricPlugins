@@ -1,3 +1,4 @@
+import datetime
 import pickle
 import random
 from pathlib import Path
@@ -8,7 +9,7 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, MessageEvent
 from graia.ariadne.exception import UnknownTarget
 from graia.ariadne.message.chain import MessageChain
-from graia.ariadne.message.element import ForwardNode, Forward, At
+from graia.ariadne.message.element import ForwardNode, Forward, At, MultimediaElement, Image
 from graia.ariadne.message.parser.twilight import (
     Twilight,
     ElementMatch,
@@ -96,11 +97,14 @@ async def _pickle(to_upload: MessageEvent, meta: MessageEvent) -> str:
         target=meta.sender,
         time=to_upload.source.time,
         message=MessageChain(
-            f"#{file.stem}\n"
+            f"圣经 #{file.stem}\n"
             f"由 {meta.sender.name} ({meta.sender.id}) "
             f"于 {meta.source.time:%Y-%m-%d %H:%M:%S} 上传"
         ),
     )
+    for element in to_upload.message_chain:
+        if isinstance(element, MultimediaElement):
+            await element.get_bytes()
     forward = Forward(meta_msg, to_upload)
     async with aiofiles.open(file, "wb") as f:
         await f.write(pickle.dumps(forward))
