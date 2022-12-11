@@ -130,8 +130,6 @@ async def _run_txt2img(
                         if msg["msg"] == "process_completed":
                             logger.success(f"[AI 画图] {session}: 生成完成")
                             b64 = msg["output"]["data"][0][0]
-                            with open("test.html", "w") as f:
-                                f.write(b64)
                             return _get_page(
                                 positive,
                                 negative,
