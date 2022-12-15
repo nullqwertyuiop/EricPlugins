@@ -8,7 +8,7 @@ channel = Channel.current()
 
 @dataclass
 class TwitterPreviewMetricsConfig:
-    """ 推特预览数据配置 """
+    """推特预览数据配置"""
 
     tags: bool = False
     """ 包含标签 """
@@ -34,7 +34,7 @@ class TwitterPreviewMetricsConfig:
 
 @config(channel.module)
 class TwitterPreviewConfig:
-    """ 推特预览配置 """
+    """推特预览配置"""
 
     bearer: str = ""
     """ Bearer Token，需要 v2 Essentials 权限 """
@@ -42,7 +42,9 @@ class TwitterPreviewConfig:
     lifespan: int = 60 * 60 * 24
     """ 生命周期 """
 
-    metrics: TwitterPreviewMetricsConfig = field(default_factory=TwitterPreviewMetricsConfig)
+    metrics: TwitterPreviewMetricsConfig = field(
+        default_factory=TwitterPreviewMetricsConfig
+    )
     """ 推特预览数据配置 """
 
 

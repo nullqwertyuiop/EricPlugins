@@ -160,7 +160,7 @@ class ParsedTweet(UnparsedTweet):
             url = get_link(await serve_file(video, filename, lifespan=config.lifespan))
             page.add(
                 VideoBox(
-                    url=f"http://{url}",  # noqa
+                    url=url,
                     loop=False,
                     controls=True,
                 )

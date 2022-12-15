@@ -1,13 +1,11 @@
 {
     "name": "推特预览",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "pack": "module.twitter_preview",
     "authors": [
         "nullqwertyuiop"
     ],
-    "required": [
-        "library.module.file_server"
-    ],
+    "required": [],
     "description": "发送推特链接自动生成预览图",
     "category": [
         "utility:实用工具",
