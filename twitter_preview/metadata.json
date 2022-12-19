@@ -1,6 +1,6 @@
 {
     "name": "推特预览",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "pack": "module.twitter_preview",
     "authors": [
         "nullqwertyuiop"
@@ -12,7 +12,7 @@
         "preview:预览"
     ],
     "advanced": {
-        "enable_by_default": true,
+        "enable_by_default": false,
         "allow_disable": true,
         "allow_unload": true,
         "hidden": false

@@ -28,9 +28,11 @@ from library.decorator.function_call import FunctionCall
 from library.decorator.switch import Switch
 from library.model.config.eric import EricConfig
 from library.util.dispatcher import PrefixMatch
+from library.util.group_config.util import module_create
 from library.util.message import send_message
 from library.util.waiter.friend import FriendImageWaiter
 from library.util.waiter.group import GroupImageWaiter
+from module.image_searcher.config import ImageSearchGroupConfig
 from module.image_searcher.engines import __engines__
 
 channel = Channel.current()
@@ -104,10 +106,16 @@ async def image_searcher(
         quote=event.source,
     )
 
-    config: EricConfig = create(EricConfig)
+    eric_config: EricConfig = create(EricConfig)
+    search_config: ImageSearchGroupConfig = module_create(
+        ImageSearchGroupConfig,
+        event.sender.group if isinstance(event, GroupMessage) else 0,
+        flush=True
+    )
     tasks = [
-        asyncio.create_task(engine(proxies=config.proxy, url=image))
-        for engine in __engines__.values()
+        asyncio.create_task(engine(proxies=eric_config.proxy, url=image))
+        for name, engine in __engines__.items()
+        if search_config.__getattribute__(name)
     ]
     msgs = await asyncio.gather(*tasks)
     await app.recall_message(bot_msg)
@@ -126,7 +134,7 @@ async def image_searcher(
                         ForwardNode(
                             target=app.account,
                             time=datetime.now(),
-                            name=config.name,
+                            name=eric_config.name,
                             message=msg,
                         )
                         for msg in msgs

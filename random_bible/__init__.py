@@ -1,4 +1,3 @@
-import datetime
 import pickle
 import random
 from pathlib import Path
@@ -9,7 +8,7 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, MessageEvent
 from graia.ariadne.exception import UnknownTarget
 from graia.ariadne.message.chain import MessageChain
-from graia.ariadne.message.element import ForwardNode, Forward, At, MultimediaElement, Image
+from graia.ariadne.message.element import ForwardNode, Forward, At, MultimediaElement
 from graia.ariadne.message.parser.twilight import (
     Twilight,
     ElementMatch,
