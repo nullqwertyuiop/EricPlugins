@@ -1,0 +1,21 @@
+{
+    "name": "可露希尔聊天室",
+    "version": "0.1.0",
+    "pack": "module.closure_talk",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [
+        "library.module.file_server"
+    ],
+    "description": "生成一仿可露希尔聊天室风格的图片",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
