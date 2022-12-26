@@ -1,3 +1,6 @@
+import html
+import re
+
 from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
 from graia.ariadne.exception import UnknownTarget
@@ -8,7 +11,7 @@ from graia.ariadne.message.parser.twilight import (
     FullMatch,
     ElementMatch,
     RegexResult,
-    WildcardMatch,
+    WildcardMatch, ArgumentMatch, ArgResult,
 )
 from graia.saya import Channel
 from graiax.playwright import PlaywrightBrowser
@@ -31,7 +34,8 @@ channel = Channel.current()
         ElementMatch(At, optional=True),
         PrefixMatch(),
         FullMatch("入典"),
-        WildcardMatch() @ "content",
+        ArgumentMatch("-c", "--color", action="store_true", default=False) @ "color",
+        WildcardMatch().flags(re.S) @ "content",
     )
 )
 @decorate(
@@ -40,7 +44,7 @@ channel = Channel.current()
     Blacklist.check(),
     FunctionCall.record(channel.module),
 )
-async def make_it_a_quote(app: Ariadne, event: MessageEvent, content: RegexResult):
+async def make_it_a_quote(app: Ariadne, event: MessageEvent, color: ArgResult, content: RegexResult):
     if not content.result.display and not event.quote:
         return await send_message(event, MessageChain("回复消息或手动输入内容时可用"), app.account)
     if not (text := content.result.display):
@@ -52,8 +56,10 @@ async def make_it_a_quote(app: Ariadne, event: MessageEvent, content: RegexResul
             text = event.message_chain.display
         except UnknownTarget:
             return await send_message(event, MessageChain("暂未缓存该消息"), app.account)
-    _html = html.format(
+    text = html.escape(text).replace("\n", "<br>")
+    _html = html_string.format(
         url=f"https://q2.qlogo.cn/headimg_dl?dst_uin={event.sender.id}&spec=640",
+        filter="" if color.result else "filter: grayscale(100%);",
         text=text,
         subtext=f"-- {event.sender.name}",
         HARMONY_FONT_URL=HARMONY_FONT_URL
@@ -69,7 +75,7 @@ async def make_it_a_quote(app: Ariadne, event: MessageEvent, content: RegexResul
     return await send_message(event, MessageChain(Image(data_bytes=img)), app.account)
 
 
-html = """
+html_string = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,7 +100,7 @@ html = """
             width: 640px;
             height: 640px;
             mask: linear-gradient(75deg, black 60%, transparent 75%, transparent 100%);
-            filter: grayscale(100%);
+            {filter}
         }}
 
         .text-margin {{
