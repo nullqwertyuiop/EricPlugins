@@ -1,0 +1,21 @@
+{
+    "name": "入典",
+    "version": "0.1.0",
+    "pack": "module.make_it_a_quote",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [
+        "library.module.file_server"
+    ],
+    "description": "典",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
