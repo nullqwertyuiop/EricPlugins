@@ -1,0 +1,20 @@
+{
+    "name": "快捷搜索",
+    "version": "0.1.0",
+    "pack": "module.search_shortcut",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [],
+    "description": "自己搜",
+    "category": [
+        "network:网络",
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
