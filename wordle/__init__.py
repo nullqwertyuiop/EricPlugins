@@ -20,7 +20,7 @@ from graiax.shortcut import listen, dispatch, decorate
 from kayaku import create
 from loguru import logger
 
-from library.decorator import Switch, Blacklist, FunctionCall
+from library.decorator import Switch, Blacklist, FunctionCall, Distribution
 from library.model.config import FunctionConfig
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
@@ -38,6 +38,7 @@ decorators = [
     Switch.check(channel.module),
     Blacklist.check(),
     FunctionCall.record(channel.module),
+    Distribution.distribute()
 ]
 
 # 你肯定好奇为什么会有一个 @ "_"，因为这涉及到一个bug
@@ -189,6 +190,7 @@ async def wordle(
                     w,
                     dic_data[guess_word],
                     group,
+                    app.account,
                     member if single_gamer else None,
                 ),
                 timeout=300,

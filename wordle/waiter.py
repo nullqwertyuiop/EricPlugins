@@ -24,8 +24,10 @@ class WordleWaiter(Waiter.create([GroupMessage])):
         wordle: Wordle,
         meaning: Dict[str, str],
         group: Union[Group, int],
+        account: int,
         member: Optional[Union[Member, int]] = None,
     ):
+        self.account = account
         self.wordle = wordle
         self.group = group if isinstance(group, int) else group.id
         self.meaning = meaning
@@ -78,7 +80,7 @@ class WordleWaiter(Waiter.create([GroupMessage])):
         source: Source,
     ):
         # 判断是否是服务范围
-        if self.group != group.id or (self.member and self.member != member.id):
+        if app.account != self.account or self.group != group.id or (self.member and self.member != member.id):
             return
 
         # 什么，放弃了？GiveUp!
