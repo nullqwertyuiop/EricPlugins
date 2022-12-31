@@ -1,0 +1,17 @@
+{
+    "name": "Wordle",
+    "version": "0.1.0",
+    "pack": "module.wordle",
+    "authors": [],
+    "required": [],
+    "description": "Wordle 猜词游戏",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
