@@ -60,6 +60,7 @@ class WordleWaiter(Waiter.create([GroupMessage])):
             ),
             app.account,
             quote=source,
+            is_group=True,
         )
 
         async with self.member_list_mutex:
@@ -80,7 +81,11 @@ class WordleWaiter(Waiter.create([GroupMessage])):
         source: Source,
     ):
         # 判断是否是服务范围
-        if app.account != self.account or self.group != group.id or (self.member and self.member != member.id):
+        if (
+            app.account != self.account
+            or self.group != group.id
+            or (self.member and self.member != member.id)
+        ):
             return
 
         # 什么，放弃了？GiveUp!
@@ -101,7 +106,8 @@ class WordleWaiter(Waiter.create([GroupMessage])):
                     if self.wordle.guess_right_chars
                     else "你还没有猜对过一个字母哦~再猜猜吧~"
                 ),
-                app.account
+                app.account,
+                is_group=True,
             )
             return True
 
@@ -120,11 +126,16 @@ class WordleWaiter(Waiter.create([GroupMessage])):
                 MessageChain(f"你确定 {word} 是一个合法的单词吗？"),
                 app.account,
                 quote=source,
+                is_group=True,
             )
             return True
         elif word in self.wordle.history_words:
             await send_message(
-                group, MessageChain("你已经猜过这个单词了呢"), app.account, quote=source
+                group,
+                MessageChain("你已经猜过这个单词了呢"),
+                app.account,
+                quote=source,
+                is_group=True,
             )
             return True
 
@@ -143,17 +154,23 @@ class WordleWaiter(Waiter.create([GroupMessage])):
                 ),
                 app.account,
                 quote=source,
+                is_group=True,
             )
             await self.remove_running()
             return False
         elif game_end:
             await self.update_statistic(StatisticType.wrong, member)
             return (
-                await self.game_over(app, source) if group.id in running_group else False
+                await self.game_over(app, source)
+                if group.id in running_group
+                else False
             )
         else:
             await send_message(
-                group, MessageChain(Image(data_bytes=self.wordle.get_img())), app.account
+                group,
+                MessageChain(Image(data_bytes=self.wordle.get_img())),
+                app.account,
+                is_group=True,
             )
             await self.update_statistic(StatisticType.wrong, member)
             return True
