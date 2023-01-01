@@ -6,7 +6,7 @@ from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEven
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image, ForwardNode, Forward
 from graia.ariadne.message.parser.twilight import Twilight, WildcardMatch, RegexMatch
-from graia.ariadne.util.saya import decorate, dispatch, listen
+from graiax.shortcut import decorate, dispatch, listen
 from graia.saya import Channel
 from kayaku import create
 
@@ -14,7 +14,7 @@ from library.decorator.blacklist import Blacklist
 from library.decorator.distribute import Distribution
 from library.decorator.function_call import FunctionCall
 from library.decorator.switch import Switch
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from module.twitter_preview.model.response import ErrorResponse
 from module.twitter_preview.util import get_status_id, query
 

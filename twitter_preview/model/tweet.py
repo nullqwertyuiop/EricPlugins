@@ -11,7 +11,7 @@ from kayaku import create
 from loguru import logger
 from pydantic import BaseModel
 
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from library.module.file_server.util import serve_file, get_link
 from library.ui import Page
 from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox, VideoBox

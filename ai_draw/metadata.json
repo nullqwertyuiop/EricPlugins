@@ -9,7 +9,10 @@
         "library.module.file_server"
     ],
     "description": "利用 Stable Diffusion 生成图片",
-    "category": [],
+    "category": [
+        "utility:实用工具",
+        "network:网络"
+    ],
     "advanced": {
         "enable_by_default": false,
         "allow_disable": true,

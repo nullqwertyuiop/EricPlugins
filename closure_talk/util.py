@@ -9,7 +9,7 @@ from graia.saya import Channel
 from kayaku import create
 from loguru import logger
 
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from library.util.misc import inflate
 from library.util.module import Modules
 from module.closure_talk.model.character import ClosureCharacter

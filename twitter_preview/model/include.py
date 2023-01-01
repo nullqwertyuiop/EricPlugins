@@ -4,7 +4,7 @@ from aiohttp import ClientSession
 from kayaku import create
 from pydantic import BaseModel, validator
 
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 
 
 class AnimatedGif(BaseModel):

@@ -66,9 +66,9 @@ async def wordle_help(app: Ariadne, event: MessageEvent):
             "黄色块代表此单词中有此字母，但该字母所处位置不对\n"
             "绿色块代表此单词中有此字母且位置正确\n"
             "猜出单词或用光次数则游戏结束\n"
-            f"发起游戏：{config.prefix[0]}wordle -l=5 -d=SAT，其中-l/-length为单词长度，-d/-dic为指定词典，默认为5和CET4\n"
-            f"中途放弃：{config.prefix[0]}wordle -g 或 {config.prefix[0]}wordle -giveup\n"
-            f"查看数据统计：{config.prefix[0]}wordle -s 或 {config.prefix[0]}wordle -statistic\n"
+            f"发起游戏：{config.prefix[0]}wordle -l 5 -d SAT，其中-l/--length为单词长度，-d/--dic为指定词典，默认为5和CET4\n"
+            f"中途放弃：{config.prefix[0]}wordle -g 或 {config.prefix[0]}wordle --giveup\n"
+            f"查看数据统计：{config.prefix[0]}wordle -s 或 {config.prefix[0]}wordle --statistic\n"
             f"查看提示：{config.prefix[0]}wordle -hint\n"
             f"注：目前包含词典：{'、'.join(word_dic)}"
         ),

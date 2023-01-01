@@ -17,7 +17,7 @@ from graia.ariadne.message.parser.twilight import (
     ElementMatch,
     ElementResult,
 )
-from graia.ariadne.util.saya import dispatch, listen, decorate
+from graiax.shortcut import dispatch, listen, decorate
 from graia.broadcast.interrupt import InterruptControl
 from graia.saya import Channel
 from kayaku import create
@@ -26,7 +26,7 @@ from library.decorator.blacklist import Blacklist
 from library.decorator.distribute import Distribution
 from library.decorator.function_call import FunctionCall
 from library.decorator.switch import Switch
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from library.util.dispatcher import PrefixMatch
 from library.util.group_config.util import module_create
 from library.util.message import send_message

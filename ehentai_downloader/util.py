@@ -10,7 +10,7 @@ from loguru import logger
 from lxml import html
 
 from library.decorator import timer
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from library.module.file_server.util import serve_file, get_link, serve_page
 from library.ui.element import Page, Banner, GenericBox, GenericBoxItem, Button
 from library.util.session_container import SessionContainer

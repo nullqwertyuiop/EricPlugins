@@ -5,7 +5,7 @@ from graia.saya import Channel
 from kayaku import create
 from pydantic import ValidationError
 
-from library.model.config.eric import EricConfig
+from library.model.config import EricConfig
 from library.ui import Page
 from library.ui.element import Banner, GenericBox, GenericBoxItem
 from module.twitter_preview.model.config import TwitterPreviewConfig

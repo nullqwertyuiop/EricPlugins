@@ -10,7 +10,7 @@ from graia.ariadne.message.parser.twilight import (
     RegexMatch,
     RegexResult,
 )
-from graia.ariadne.util.saya import listen, dispatch, decorate
+from graiax.shortcut import listen, dispatch, decorate
 from graia.saya import Channel
 
 from library.decorator.blacklist import Blacklist

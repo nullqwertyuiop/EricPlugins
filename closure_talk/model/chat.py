@@ -9,7 +9,7 @@ from loguru import logger
 from lxml.html import builder, tostring
 from lxml.html.builder import CLASS
 
-from library.model.config.service.fastapi import FastAPIConfig
+from library.model.config import FastAPIConfig
 from library.ui.util import wrap_text
 from library.util.module import Modules
 from module.closure_talk.style import _STYLE
