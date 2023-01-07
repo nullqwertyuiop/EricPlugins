@@ -47,7 +47,8 @@ channel = Channel.current()
 async def make_it_a_quote(app: Ariadne, event: MessageEvent, color: ArgResult, content: RegexResult):
     if not content.result.display and not event.quote:
         return await send_message(event, MessageChain("回复消息或手动输入内容时可用"), app.account)
-    if not (text := content.result.display):
+    content: MessageChain = content.result
+    if not (text := content.display):
         try:
             event: MessageEvent = await app.get_message_from_id(
                 event.quote.id,
@@ -104,7 +105,7 @@ html_string = """
         }}
 
         .text-margin {{
-            margin: 10px;
+            margin: 10px 50px 10px 10px;
         }}
 
         p {{
