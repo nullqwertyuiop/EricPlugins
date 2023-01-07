@@ -24,6 +24,7 @@ from library.decorator import Switch, Blacklist, FunctionCall, Distribution
 from library.model.config import FunctionConfig
 from library.util.dispatcher import PrefixMatch
 from library.util.group_config import module_create
+from library.util.group_config.util import module_save
 from library.util.message import send_message
 from module.wordle.config import WordleGroupConfig
 from module.wordle.gb import running_group, running_mutex
@@ -134,6 +135,7 @@ async def wordle_keyboard_cfg(app: Ariadne, event: MessageEvent, no_keyboard: Ar
         wordle_group_cfg.show_keyboard = False
     if keyboard:
         wordle_group_cfg.show_keyboard = True
+    module_save(WordleGroupConfig, field=event.sender.group)
     await send_message(
         event,
         MessageChain(f"Wordle 键盘已{'开启' if wordle_group_cfg.show_keyboard else '关闭'}"),

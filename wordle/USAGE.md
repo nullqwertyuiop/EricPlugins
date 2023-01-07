@@ -49,3 +49,15 @@
 ```text
 {prefix}wordle [-s | --statistic]
 ```
+
+## 关闭键盘
+
+```text
+{prefix}wordle [-n | --no-keyboard]
+```
+
+## 打开键盘
+
+```text
+{prefix}wordle [-k | --keyboard]
+```
