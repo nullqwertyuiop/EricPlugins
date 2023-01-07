@@ -129,7 +129,7 @@ async def wordle_keyboard_cfg(app: Ariadne, event: MessageEvent, no_keyboard: Ar
             app.account,
         )
         return
-    wordle_group_cfg: WordleGroupConfig = module_create(WordleGroupConfig)
+    wordle_group_cfg: WordleGroupConfig = module_create(WordleGroupConfig, event.sender.group)
     if no_keyboard:
         wordle_group_cfg.show_keyboard = False
     if keyboard:
