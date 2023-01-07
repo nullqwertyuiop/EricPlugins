@@ -1,0 +1,19 @@
+{
+    "name": "B 站链接解析",
+    "version": "0.1.4",
+    "pack": "module.bilibili_link_resolve",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "发送 B 站链接自动解析内容",
+    "category": [
+        "utility:实用工具",
+        "preview:预览",
+        "network:网络"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

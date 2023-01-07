@@ -1,0 +1,18 @@
+{
+    "name": "AI 画图",
+    "version": "0.1.10",
+    "pack": "module.ai_draw",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "利用 Stable Diffusion 生成图片",
+    "category": [
+        "utility:实用工具",
+        "network:网络"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

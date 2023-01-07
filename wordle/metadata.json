@@ -1,0 +1,19 @@
+{
+    "name": "Wordle",
+    "version": "0.1.7",
+    "pack": "module.wordle",
+    "authors": [
+        "SAGIRI-kawaii",
+        "I_love_study",
+        "nullqwertyuiop"
+    ],
+    "description": "Wordle 猜词游戏",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

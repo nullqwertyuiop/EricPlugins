@@ -1,0 +1,17 @@
+{
+    "name": "以图搜图",
+    "version": "0.1.3",
+    "pack": "module.image_searcher",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "基于多引擎的图片搜索",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
