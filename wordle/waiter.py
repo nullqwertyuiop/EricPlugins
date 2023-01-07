@@ -10,7 +10,9 @@ from graia.broadcast.interrupt.waiter import Waiter
 from kayaku import create
 
 from library.model.config import FunctionConfig
+from library.util.group_config import module_create
 from library.util.message import send_message
+from module.wordle.config import WordleGroupConfig
 from module.wordle.gb import running_group, running_mutex
 from module.wordle.utils import StatisticType, update_member_statistic
 from module.wordle.wordle import Wordle, all_word
@@ -166,9 +168,13 @@ class WordleWaiter(Waiter.create([GroupMessage])):
                 else False
             )
         else:
+            wordle_group_cfg: WordleGroupConfig = module_create(WordleGroupConfig, group, flush=True)
+            image = self.wordle.get_img()
+            keyboard = self.wordle.get_keyboard() if wordle_group_cfg.show_keyboard else None
+            images = [Image(data_bytes=img) for img in [image, keyboard] if img]
             await send_message(
                 group,
-                MessageChain(Image(data_bytes=self.wordle.get_img())),
+                MessageChain(*images),
                 app.account,
                 is_group=True,
             )

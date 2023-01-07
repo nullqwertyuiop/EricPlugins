@@ -1,8 +1,12 @@
 {
     "name": "Wordle",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "pack": "module.wordle",
-    "authors": [],
+    "authors": [
+        "SAGIRI-kawaii",
+        "I_love_study",
+        "nullqwertyuiop"
+    ],
     "required": [],
     "description": "Wordle 猜词游戏",
     "category": [

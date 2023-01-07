@@ -5,6 +5,8 @@ from typing import Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
+from module.wordle.keyboard import QWERTY_LAYOUT
+
 word_path = Path(__file__).parent / "assets" / "words"
 
 all_word = {
@@ -43,6 +45,11 @@ class Wordle:
         self.font_size = 20
         self.font = font
 
+        # For keyboard rendering
+        self.correct_chars = set()
+        self.wrong_chars = set()
+        self.wrong_pos_chars = set()
+
         # Right word
         self.guess_right_chars = set()
         self.history_words = []
@@ -56,7 +63,7 @@ class Wordle:
         board_side_height = (
             2 * self.padding
             + self.length * self.block_padding
-            + (self.row) * self.block_a
+            + self.row * self.block_a
         )
         self.size = (board_side_width, board_side_height)
         self.pic = Image.new("RGB", self.size, self.background_color)
@@ -81,12 +88,74 @@ class Wordle:
             if c == self.word_upper[i]:
                 ret_data.append(self.right_color)
                 self.guess_right_chars.add(c)
+                self.correct_chars.add(c.upper())
             elif c in self.word_upper:
                 ret_data.append(self.wplace_color)
                 self.guess_right_chars.add(c)
+                self.wrong_pos_chars.add(c.upper())
             else:
+                self.wrong_chars.add(c.upper())
                 ret_data.append(self.none_color)
         return ret_data
+
+    def get_char_color(self, char: str) -> tuple[int, int, int]:
+        if char in self.correct_chars:
+            return self.right_color
+        elif char in self.wrong_pos_chars:
+            return self.wplace_color
+        elif char in self.wrong_chars:
+            return self.none_color
+        else:
+            return self.background_color
+
+    def get_keyboard(self) -> bytes:
+        max_row = max(len(row) for row in QWERTY_LAYOUT)
+        size: tuple[int, int] = (
+            2 * self.padding
+            + (max_row - 1) * self.block_padding
+            + max_row * self.block_a,
+            2 * self.padding
+            + (len(QWERTY_LAYOUT) - 1) * self.block_padding
+            + len(QWERTY_LAYOUT) * self.block_a,
+        )
+        keyboard = Image.new("RGB", size, self.background_color)
+        y = 0
+        paste_y = self.padding
+        for row in QWERTY_LAYOUT:
+            row_size: tuple[int, int] = (
+                2 * self.padding + (len(row) - 1) * self.block_padding + len(row) * self.block_a,
+                self.block_a,
+            )
+            row_img = Image.new("RGB", row_size, self.background_color)
+            row_draw = ImageDraw.Draw(row_img)
+            char_y = int(y + (self.block_a - self.font_size) / 2)
+            for i, l in enumerate(row):
+                x = self.padding + (i * (self.block_a + self.block_padding))
+                row_draw.rectangle(
+                    (x, y, x + self.block_a, y + self.block_a),
+                    fill=self.get_char_color(l),
+                    outline=self.none_color,
+                    width=self.block_border,
+                )
+                char_x = self.font.getlength(l.upper())
+                if (
+                    l in self.correct_chars
+                    or l in self.wrong_pos_chars
+                    or l in self.wrong_chars
+                ):
+                    char_color = self.background_color
+                else:
+                    char_color = self.none_color
+                row_draw.text(
+                    (int(x + (self.block_a - char_x) / 2), char_y),
+                    l,
+                    char_color,
+                    self.font,
+                )
+            keyboard.paste(row_img, ((size[0] - row_size[0]) // 2, paste_y))
+            paste_y += self.block_a + self.block_padding
+        keyboard.save(b := BytesIO(), format="png")
+        return b.getvalue()
 
     def get_hint(self) -> bytes:
         size = (

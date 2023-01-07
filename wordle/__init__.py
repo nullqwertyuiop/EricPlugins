@@ -23,7 +23,9 @@ from loguru import logger
 from library.decorator import Switch, Blacklist, FunctionCall, Distribution
 from library.model.config import FunctionConfig
 from library.util.dispatcher import PrefixMatch
+from library.util.group_config import module_create
 from library.util.message import send_message
+from module.wordle.config import WordleGroupConfig
 from module.wordle.gb import running_group, running_mutex
 from module.wordle.utils import get_member_statistic
 from module.wordle.waiter import WordleWaiter
@@ -104,6 +106,38 @@ async def wordle_statistic(app: Ariadne, event: MessageEvent):
         ),
         app.account,
         quote=event.source,
+    )
+
+
+@listen(GroupMessage)
+@dispatch(
+    Twilight(
+        PrefixMatch(),
+        FullMatch("wordle"),
+        ArgumentMatch("-n", "--no-keyboard", action="store_true") @ "no_keyboard",
+        ArgumentMatch("-k", "--keyboard", action="store_true") @ "keyboard",
+    )
+)
+@decorate(*decorators)
+async def wordle_keyboard_cfg(app: Ariadne, event: MessageEvent, no_keyboard: ArgResult, keyboard: ArgResult):
+    no_keyboard = no_keyboard.result
+    keyboard = keyboard.result
+    if no_keyboard and keyboard:
+        await send_message(
+            event,
+            MessageChain("参数错误，无法同时开启和关闭键盘"),
+            app.account,
+        )
+        return
+    wordle_group_cfg: WordleGroupConfig = module_create(WordleGroupConfig)
+    if no_keyboard:
+        wordle_group_cfg.show_keyboard = False
+    if keyboard:
+        wordle_group_cfg.show_keyboard = True
+    await send_message(
+        event,
+        MessageChain(f"Wordle 键盘已{'开启' if wordle_group_cfg.show_keyboard else '关闭'}"),
+        app.account,
     )
 
 
@@ -199,4 +233,6 @@ async def wordle(
     except asyncio.exceptions.TimeoutError:
         await send_message(group, MessageChain("游戏超时，进程结束"), app.account, quote=source)
         async with running_mutex:
-            running_group.remove(group.id)
+            # 防止多次删除抛出异常
+            if group.id in running_group:
+                running_group.remove(group.id)
