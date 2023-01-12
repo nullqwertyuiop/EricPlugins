@@ -16,6 +16,7 @@ from library.module.file_server.util import serve_file, get_link
 from library.ui import Page
 from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox, VideoBox
 from library.util.misc import seconds_to_string
+from module.twitter_preview.logger import _TwitterPreviewLogger
 from module.twitter_preview.model.config import TwitterPreviewConfig
 from module.twitter_preview.model.include import Photo, Video, AnimatedGif, User
 from module.twitter_preview.var import STATUS_LINK
@@ -119,18 +120,23 @@ class ParsedTweet(UnparsedTweet):
         return images
 
     async def get_video_bytes(self) -> tuple[bytes, str]:
+        config: EricConfig = create(EricConfig)
+        yd_cfg = {
+            "logger": _TwitterPreviewLogger,
+            "proxy": config.proxy,
+        }
+
         def get_video_info() -> dict | None:
             for media in self.media:
                 if not isinstance(media, (Video, AnimatedGif)):
                     continue
-                with youtube_dl.YoutubeDL() as ydl:
+                with youtube_dl.YoutubeDL(yd_cfg) as ydl:
                     return ydl.extract_info(
                         STATUS_LINK.format(username=self.user.username, id=self.id),
                         download=False,
                     )
 
         info = await asyncio.to_thread(get_video_info)
-        config: EricConfig = create(EricConfig)
         async with ClientSession() as session:
             async with session.get(info["url"], proxy=config.proxy) as resp:
                 return await resp.read(), f"{info['display_id']}.{info['ext']}"
