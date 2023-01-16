@@ -1,6 +1,6 @@
 {
     "name": "Emoji 合成",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "pack": "module.emoji_mix",
     "authors": [
         "nullqwertyuiop"

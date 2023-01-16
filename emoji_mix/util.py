@@ -35,7 +35,8 @@ async def _download():
             logger.success("[EmojiMix] emojiData.json 下载完成")
 
 
-asyncio.get_event_loop().run_until_complete(_download())
+if not _FILE.is_file():
+    asyncio.get_event_loop().run_until_complete(_download())
 
 
 def read_data() -> list[tuple[str, str, str]]:
@@ -76,22 +77,25 @@ def emoji_to_codepoint(emoji: str) -> str:
     return "-".join(hex(ord(char))[2:] for char in emoji)
 
 
-def get_mix_emoji_url(left_emoji: str, right_emoji: str) -> str | None:
+def get_mix_emoji_url(left_emoji: str, right_emoji: str) -> str:
     left_emoji = emoji_to_codepoint(left_emoji)
     right_emoji = emoji_to_codepoint(right_emoji)
+    observe: str = ""
+    reverse: str = ""
     for _left_emoji, _right_emoji, date in _MIX_DATA:
         if _left_emoji == left_emoji and _right_emoji == right_emoji:
-            return _KITCHEN.format(
+            observe = _KITCHEN.format(
                 date=date,
                 left_emoji=left_emoji.replace("-", "-u"),
                 right_emoji=right_emoji.replace("-", "-u"),
             )
         elif _left_emoji == right_emoji and _right_emoji == left_emoji:
-            return _KITCHEN.format(
+            reverse = _KITCHEN.format(
                 date=date,
                 left_emoji=right_emoji.replace("-", "-u"),
                 right_emoji=left_emoji.replace("-", "-u"),
             )
+    return observe or reverse
 
 
 def get_available_pairs(emoji: str) -> set[str]:

@@ -14,6 +14,7 @@ from graia.ariadne.message.parser.twilight import (
 )
 from graia.saya import Channel
 from graiax.shortcut import listen, dispatch, decorate
+from graiax.shortcut.saya import every
 from kayaku import create
 
 from library.decorator import Switch, Distribution, Blacklist, FunctionCall
@@ -21,7 +22,7 @@ from library.model.config import EricConfig, FunctionConfig
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
 from library.util.session_container import SessionContainer
-from module.emoji_mix.util import _ALL_EMOJI, get_mix_emoji_url, get_available_pairs
+from module.emoji_mix.util import _ALL_EMOJI, get_mix_emoji_url, get_available_pairs, _download
 
 channel = Channel.current()
 _cfg: EricConfig = create(EricConfig)
@@ -97,3 +98,8 @@ async def emoji_mix(app: Ariadne, event: MessageEvent, keyword: RegexResult):
             app.account,
         )
     return send_message(event, MessageChain("没有可用的 Emoji 组合"), app.account)
+
+
+@every(24, mode="hour")
+async def emoji_mix_update():
+    await _download()
