@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from library.model.config import EricConfig
 from library.module.file_server.util import serve_file, get_link
-from library.ui import Page
+from library.ui import Page, ColorSchema
 from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox, VideoBox
 from library.util.misc import seconds_to_string
 from module.twitter_preview.logger import _TwitterPreviewLogger
@@ -141,10 +141,28 @@ class ParsedTweet(UnparsedTweet):
             async with session.get(info["url"], proxy=config.proxy) as resp:
                 return await resp.read(), f"{info['display_id']}.{info['ext']}"
 
-    async def get_page(self, banner_text: str = "Twitter 预览") -> Page:
+    @staticmethod
+    def _get_schema(image: bytes) -> ColorSchema:
+        # 延后导入，避免旧版本无法使用
+        from library.ui.color.palette import ColorPalette
+
+        return ColorPalette.generate_schema(image)
+
+    async def get_page(self, banner_text: str = None) -> Page:
         config: TwitterPreviewConfig = create(TwitterPreviewConfig)
-        logger.info(f"取得推文 {self.id} 图片中...")
+        banner_text = banner_text or "Twitter 预览"
+        logger.info(f"[TwitterPreview] 取得推文 {self.id} 图片中...")
         images: list[bytes] = await self.get_images()
+
+        if config.dynamic_color and images:
+            try:
+                schema = self._get_schema(images[0])
+            except ImportError:
+                logger.warning("[TwitterPreview] 无法导入 ColorPalette，将使用默认颜色方案。")
+                schema = None
+        else:
+            schema = None
+
         _avatar: PillowImage.Image = PillowImage.open(
             BytesIO(await self.user.get_avatar())
         )
@@ -158,6 +176,7 @@ class ParsedTweet(UnparsedTweet):
                 )
             ),
             title=f"Twitter 预览 - {self.user.name}",
+            schema=schema
         )
 
         page.add(*[ImageBox.from_bytes(image) for image in images])

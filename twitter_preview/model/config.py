@@ -47,5 +47,8 @@ class TwitterPreviewConfig:
     )
     """ 推特预览数据配置 """
 
+    dynamic_color: bool = True
+    """ 动态颜色 """
+
 
 create(TwitterPreviewConfig)
