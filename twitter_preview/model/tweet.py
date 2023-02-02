@@ -163,16 +163,13 @@ class ParsedTweet(UnparsedTweet):
         else:
             schema = None
 
-        _avatar: PillowImage.Image = PillowImage.open(
-            BytesIO(await self.user.get_avatar())
-        )
-
         page = Page(
             Banner(banner_text),
             GenericBox(
                 GenericBoxItem(
                     text=self.user.name,
                     description=self.user.username,
+                    image=await self.user.get_avatar(),
                 )
             ),
             title=f"Twitter 预览 - {self.user.name}",

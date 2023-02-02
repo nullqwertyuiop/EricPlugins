@@ -1,6 +1,6 @@
 {
     "name": "推特预览",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "pack": "module.twitter_preview",
     "authors": [
         "nullqwertyuiop"
