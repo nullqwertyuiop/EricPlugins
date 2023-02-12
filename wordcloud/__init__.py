@@ -211,7 +211,7 @@ def generate_wordcloud(frequencies: dict[str, float], mask: ... = None) -> bytes
         mask=mask,
     )
     wc.generate_from_frequencies(frequencies)
-    if mask:
+    if mask is not None:
         wc.recolor(
             color_func=ImageColorGenerator(
                 mask, default_color=(0, 0, 0) if dark else (255, 255, 255)
@@ -238,7 +238,3 @@ def read_mask():
     ):
         return np.array(PillowImage.open(file))  # type: ignore
     return None
-
-
-def load_filter():
-    pass
