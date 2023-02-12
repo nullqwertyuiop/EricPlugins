@@ -14,7 +14,7 @@ from graia.ariadne.message.parser.twilight import (
 from graia.saya import Channel
 from graiax.shortcut import listen, dispatch, decorate
 
-from library.decorator import Switch, Blacklist, FunctionCall
+from library.decorator import Switch, Blacklist, FunctionCall, Distribution
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
 
@@ -33,6 +33,7 @@ channel = Channel.current()
 )
 @decorate(
     Switch.check(channel.module),
+    Distribution.distribute(),
     Blacklist.check(),
     FunctionCall.record(channel.module),
 )
