@@ -148,14 +148,17 @@ def parse_condition(
 
 
 class WCFilter:
-    keys: list[str]
+    keys: set[str]
 
     def __init__(self):
-        if ((it(Modules).get(channel.module)).data_path / "filter.txt").is_file():
-            with open((it(Modules).get(channel.module)).data_path / "filter.txt") as f:
-                self.keys = f.read().splitlines()
-        else:
-            self.keys = []
+        self.keys = set()
+        self.load_txt(Path(__file__).parent / "assets" / "filter.txt")
+        if (custom := (it(Modules).get(channel.module)).data_path / "filter.txt").is_file():
+            self.load_txt(custom)
+
+    def load_txt(self, path: Path):
+        with path.open("r", encoding="utf-8") as f:
+            self.keys = self.keys | set(f.read().splitlines())
 
     def filter(self, content: str) -> str:
         content = self.filter_at(content)
@@ -181,11 +184,15 @@ async def get_frequency(
         .limit(item_count)
     )
     result = {}
+    content = ""
     for (item,) in cursor.yield_per(1):
         item = _filter.filter(item)
-        jieba_analyse = extract_tags(item, topK=None, withWeight=True)
-        for word, weight in jieba_analyse:
-            result[word] = result.get(word, 0) + weight
+        if not item:
+            continue
+        content += f" {item}"
+    jieba_analyse = extract_tags(content, topK=None, withWeight=True)
+    for word, weight in jieba_analyse:
+        result[word] = weight
     return {
         k: v
         for k, v in sorted(result.items(), key=lambda x: x[1], reverse=True)[:kw_count]
