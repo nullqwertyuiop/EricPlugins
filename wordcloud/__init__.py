@@ -185,11 +185,12 @@ def generate_wordcloud(frequencies: dict[str, float], mask: ... = None) -> bytes
         mask=mask,
     )
     wc.generate_from_frequencies(frequencies)
-    wc.recolor(
-        color_func=ImageColorGenerator(
-            mask, default_color=(0, 0, 0) if dark else (255, 255, 255)
+    if mask:
+        wc.recolor(
+            color_func=ImageColorGenerator(
+                mask, default_color=(0, 0, 0) if dark else (255, 255, 255)
+            )
         )
-    )
     bytes_io = BytesIO()
     img = wc.to_image()
     img.save(bytes_io, format="PNG")
