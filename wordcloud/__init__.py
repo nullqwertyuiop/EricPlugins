@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 from datetime import datetime
 from io import BytesIO
@@ -146,6 +147,30 @@ def parse_condition(
     return conditions
 
 
+class WCFilter:
+    keys: list[str]
+
+    def __init__(self):
+        if ((it(Modules).get(channel.module)).data_path / "filter.txt").is_file():
+            with open((it(Modules).get(channel.module)).data_path / "filter.txt") as f:
+                self.keys = f.read().splitlines()
+        else:
+            self.keys = []
+
+    def filter(self, content: str) -> str:
+        content = self.filter_at(content)
+        for word in self.keys:
+            content = content.replace(word, "")
+        return content
+
+    @staticmethod
+    def filter_at(content: str) -> str:
+        return re.sub(r"@\d+", "", content)
+
+
+_filter = WCFilter()
+
+
 async def get_frequency(
     item_count: int, kw_count: int, *conditions: ...
 ) -> dict[str, float]:
@@ -157,6 +182,7 @@ async def get_frequency(
     )
     result = {}
     for (item,) in cursor.yield_per(1):
+        item = _filter.filter(item)
         jieba_analyse = extract_tags(item, topK=None, withWeight=True)
         for word, weight in jieba_analyse:
             result[word] = result.get(word, 0) + weight
@@ -212,3 +238,7 @@ def read_mask():
     ):
         return np.array(PillowImage.open(file))  # type: ignore
     return None
+
+
+def load_filter():
+    pass
