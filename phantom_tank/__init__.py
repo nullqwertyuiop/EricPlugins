@@ -21,6 +21,7 @@ from graiax.shortcut import listen, dispatch, decorate
 from library.decorator import Switch, Distribution, Blacklist, FunctionCall
 from library.util.dispatcher import PrefixMatch
 from library.util.message import send_message
+from library.util.misc import get_bytes
 
 channel = Channel.current()
 
@@ -53,8 +54,8 @@ async def phantom_tank(
 ):
     img1: Image = img1.result  # type: ignore
     img2: Image = img2.result  # type: ignore
-    display_img: PIL.Image = PIL.Image.open(await img1.get_bytes())
-    hide_img: PIL.Image = PIL.Image.open(await img2.get_bytes())
+    display_img: PIL.Image = PIL.Image.open(BytesIO(await img1.get_bytes()))
+    hide_img: PIL.Image = PIL.Image.open(BytesIO(await img2.get_bytes()))
     msg = MessageChain(
         Image(
             data_bytes=await (colorful_tank if colorful.matched else make_tank)(
