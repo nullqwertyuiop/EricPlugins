@@ -54,8 +54,9 @@ async def phantom_tank(
 ):
     img1: Image = img1.result  # type: ignore
     img2: Image = img2.result  # type: ignore
-    display_img: PIL.Image = PIL.Image.open(BytesIO(await img1.get_bytes()))
-    hide_img: PIL.Image = PIL.Image.open(BytesIO(await img2.get_bytes()))
+    display_img: PIL.Image = PIL.Image.open(BytesIO(await get_bytes(img1)))
+    hide_img: PIL.Image = PIL.Image.open(BytesIO(await get_bytes(img2)))
+    await send_message(event, MessageChain("制图中，请稍候"), app.account, quote=source)
     msg = MessageChain(
         Image(
             data_bytes=await (colorful_tank if colorful.matched else make_tank)(
