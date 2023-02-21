@@ -1,0 +1,19 @@
+{
+    "name": "OpenAI",
+    "version": "0.1.1",
+    "pack": "module.openai",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "required": [],
+    "description": "提供 OpenAI API 的支持",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "enable_by_default": false,
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
