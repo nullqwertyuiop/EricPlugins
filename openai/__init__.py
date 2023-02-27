@@ -33,6 +33,13 @@ channel = Channel.current()
 @config(channel.module)
 class _OpenAIConfig:
     api_key: str = ""
+    """ OpenAI API Key """
+
+    gpt3_cache: int = 2
+    """ GPT-3 缓存对话数量 """
+
+    gpt3_max_token: int = 4000
+    """ GPT-3 最大 Token 数量 """
 
 
 openai.api_key = create(_OpenAIConfig).api_key
@@ -98,18 +105,19 @@ _GPT_CACHE: dict[int, list[str]] = {}
 
 
 async def call_gpt3(prompt: str, field: int, name: str) -> MessageChain:
+    cfg: _OpenAIConfig = create(_OpenAIConfig)
     async with it(LockSmith).get(f"{channel.module}:gpt3.{field}"):
         logger.info(f"[OpenAI:GPT3] Generating text for {field}: {prompt}")
-        complete_prompt = _GPT_CACHE.setdefault(field, [])
-        complete_prompt.append(f"[用户 {name}]:{prompt}")
-        complete_prompt = "\n".join(complete_prompt) + "\n[机器人 你]:"
+        _GPT_CACHE.setdefault(field, [])
+        _GPT_CACHE[field].append(f"[用户 {name}]:{prompt}")
+        complete_prompt = _GPT_CACHE[field].copy()
 
         def get_text() -> str:
             response = openai.Completion.create(
                 model="text-davinci-003",
-                prompt=complete_prompt,
+                prompt="\n".join(complete_prompt) + "\n[你]:",
                 temperature=0.5,
-                max_tokens=100,
+                max_tokens=cfg.gpt3_max_token,
                 frequency_penalty=0.5,
                 presence_penalty=0.0,
                 stop=["[用户 "],
@@ -118,8 +126,8 @@ async def call_gpt3(prompt: str, field: int, name: str) -> MessageChain:
 
         try:
             resp = await asyncio.to_thread(get_text)
-            _GPT_CACHE[field] = _GPT_CACHE[field][:20]
-            _GPT_CACHE[field].append(f"[机器人 你]:{resp}")
+            _GPT_CACHE[field] = _GPT_CACHE[field][-cfg.gpt3_cache:]
+            _GPT_CACHE[field].append(f"[你]:{resp}")
         except openai.error.OpenAIError as e:
             return MessageChain(f"运行时出现错误：{str(e)}")
 
