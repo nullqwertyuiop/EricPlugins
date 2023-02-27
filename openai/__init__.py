@@ -101,20 +101,21 @@ async def call_dalle(prompt: str) -> MessageChain:
         return MessageChain(Image(data_bytes=await resp.read()))
 
 
-_GPT_CACHE: dict[int, list[str]] = {}
+_GPT_CACHE: dict[str, list[str]] = {}
 
 
-async def call_gpt3(prompt: str, field: int, name: str) -> MessageChain:
+async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageChain:
+    key = f"{field}-{sender}"
     cfg: _OpenAIConfig = create(_OpenAIConfig)
-    async with it(LockSmith).get(f"{channel.module}:gpt3.{field}"):
-        logger.info(f"[OpenAI:GPT3] Generating text for {field}: {prompt}")
-        _GPT_CACHE.setdefault(field, [])
-        _GPT_CACHE[field].append(f"[用户 {name}]:{prompt}")
+    async with it(LockSmith).get(f"{channel.module}:gpt3.{key}"):
+        logger.info(f"[OpenAI:GPT3] Generating text for {key}: {prompt}")
+        _GPT_CACHE.setdefault(key, [])
+        _GPT_CACHE[key].append(f"[用户 {name}]:{prompt}")
 
         def get_text() -> str:
             response = openai.Completion.create(
                 model="text-davinci-003",
-                prompt="\n".join(_GPT_CACHE[field].copy()) + "\n[你]:",
+                prompt="\n".join(_GPT_CACHE[key].copy()) + "\n[你]:",
                 temperature=0.5,
                 max_tokens=cfg.gpt3_max_token,
                 frequency_penalty=0.5,
@@ -125,8 +126,8 @@ async def call_gpt3(prompt: str, field: int, name: str) -> MessageChain:
 
         try:
             resp = await asyncio.to_thread(get_text)
-            _GPT_CACHE[field].append(f"[你]:{resp}")
-            _GPT_CACHE[field] = _GPT_CACHE[field][-cfg.gpt3_cache:]
+            _GPT_CACHE[key].append(f"[你]:{resp}")
+            _GPT_CACHE[key] = _GPT_CACHE[key][-cfg.gpt3_cache:]
         except openai.error.OpenAIError as e:
             return MessageChain(f"运行时出现错误：{str(e)}")
 
@@ -151,7 +152,7 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     if prompt := prompt.result.display:
         await send_message(
             event,
-            await call_gpt3(prompt, int(event.sender.group), event.sender.name),
+            await call_gpt3(prompt, int(event.sender.group), int(event.sender), event.sender.name),
             app.account,
             quote=event.source,
         )
@@ -173,5 +174,6 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     FunctionCall.record(channel.module),
 )
 async def flush_openai_api_key(app: Ariadne, event: GroupMessage):
-    _GPT_CACHE[int(event.sender.group)] = []
+    for key in _GPT_CACHE:
+        _GPT_CACHE[key] = []
     await send_message(event, MessageChain("OpenAI GPT3 缓存已刷新"), app.account)
