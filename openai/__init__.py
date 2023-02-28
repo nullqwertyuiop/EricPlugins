@@ -1,5 +1,6 @@
 import asyncio
 import re
+from asyncio import Lock
 from dataclasses import field as dt_field
 
 import openai
@@ -229,33 +230,34 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
 async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult):
     mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
     scope: str = scope.result.display if scope.matched else "user"
-    match scope:
-        case "all":
-            if not Permission.check(event.sender, UserPerm.BOT_OWNER):
-                return await send_message(event, MessageChain("权限不足"), app.account)
-            for key in _GPT_CACHE:
-                _GPT_CACHE[key] = []
-            for key in _GPT_MEMORY.copy():
-                del _GPT_MEMORY[key]
-        case "group":
-            if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
-                return await send_message(event, MessageChain("权限不足"), app.account)
-            for key in _GPT_CACHE:
-                if key.startswith(f"{int(event.sender.group)}-"):
+    async with it(LockSmith).get(channel.module):
+        match scope:
+            case "all":
+                if not Permission.check(event.sender, UserPerm.BOT_OWNER):
+                    return await send_message(event, MessageChain("权限不足"), app.account)
+                for key in _GPT_CACHE:
                     _GPT_CACHE[key] = []
-            for key in _GPT_MEMORY.copy():
-                if key.startswith(f"{int(event.sender.group)}-"):
+                for key in _GPT_MEMORY.copy():
                     del _GPT_MEMORY[key]
-        case "user":
-            if (key := f"{int(event.sender.group)}-{int(event.sender)}") in _GPT_CACHE:
-                _GPT_CACHE[key] = []
-            if key in _GPT_MEMORY:
-                del _GPT_MEMORY[key]
-        case _:
-            return await send_message(event, MessageChain("未知范围"), app.account)
-    await send_message(
-        event, MessageChain(f"{mapping.get(scope)} OpenAI GPT3 缓存已刷新"), app.account
-    )
+            case "group":
+                if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
+                    return await send_message(event, MessageChain("权限不足"), app.account)
+                for key in _GPT_CACHE:
+                    if key.startswith(f"{int(event.sender.group)}-"):
+                        _GPT_CACHE[key] = []
+                for key in _GPT_MEMORY.copy():
+                    if key.startswith(f"{int(event.sender.group)}-"):
+                        del _GPT_MEMORY[key]
+            case "user":
+                if (key := f"{int(event.sender.group)}-{int(event.sender)}") in _GPT_CACHE:
+                    _GPT_CACHE[key] = []
+                if key in _GPT_MEMORY:
+                    del _GPT_MEMORY[key]
+            case _:
+                return await send_message(event, MessageChain("未知范围"), app.account)
+        await send_message(
+            event, MessageChain(f"{mapping.get(scope)} OpenAI GPT3 缓存已刷新"), app.account
+        )
 
 
 # </editor-fold>
@@ -300,6 +302,8 @@ _CHAT_GPT_CACHE: dict[int, dict[str, str]] = {}
 
 async def call_chatgpt(prompt: str, field: int, sender: int) -> MessageChain:
     key = f"{field}-{sender}"
+    if it(LockSmith).get(f"{channel.module}:openai.{key}").locked():
+        return MessageChain("你先别急，还没说完")
     async with it(LockSmith).get(f"{channel.module}:openai.{key}"):
         for index, bot in enumerate(_CHAT_BOTS):
             _BOT_CACHE = _CHAT_GPT_CACHE.setdefault(index, {})
@@ -364,28 +368,29 @@ async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
 async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexResult):
     mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
     scope: str = scope.result.display if scope.matched else "user"
-    match scope:
-        case "all":
-            if not Permission.check(event.sender, UserPerm.BOT_OWNER):
-                return await send_message(event, MessageChain("权限不足"), app.account)
-            for index in _CHAT_GPT_CACHE.copy():
-                await _CHAT_BOTS[index].clear_conversations()
-                del _CHAT_GPT_CACHE[index]
-        case "group":
-            if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
-                return await send_message(event, MessageChain("权限不足"), app.account)
-            for index, cache in _CHAT_GPT_CACHE.items():
-                for key in cache.copy():
-                    if key.startswith(f"{int(event.sender.group)}-"):
+    async with it(LockSmith).get(channel.module):
+        match scope:
+            case "all":
+                if not Permission.check(event.sender, UserPerm.BOT_OWNER):
+                    return await send_message(event, MessageChain("权限不足"), app.account)
+                for index in _CHAT_GPT_CACHE.copy():
+                    await _CHAT_BOTS[index].clear_conversations()
+                    del _CHAT_GPT_CACHE[index]
+            case "group":
+                if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
+                    return await send_message(event, MessageChain("权限不足"), app.account)
+                for index, cache in _CHAT_GPT_CACHE.items():
+                    for key in cache.copy():
+                        if key.startswith(f"{int(event.sender.group)}-"):
+                            await _CHAT_BOTS[index].delete_conversation(cache[key])
+                            del _CHAT_GPT_CACHE[index][key]
+            case "user":
+                for index, cache in _CHAT_GPT_CACHE.items():
+                    if (key := f"{int(event.sender.group)}-{int(event.sender)}") in cache:
                         await _CHAT_BOTS[index].delete_conversation(cache[key])
                         del _CHAT_GPT_CACHE[index][key]
-        case "user":
-            for index, cache in _CHAT_GPT_CACHE.items():
-                if (key := f"{int(event.sender.group)}-{int(event.sender)}") in cache:
-                    await _CHAT_BOTS[index].delete_conversation(cache[key])
-                    del _CHAT_GPT_CACHE[index][key]
-        case _:
-            return await send_message(event, MessageChain("未知范围"), app.account)
-    await send_message(
-        event, MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"), app.account
-    )
+            case _:
+                return await send_message(event, MessageChain("未知范围"), app.account)
+        await send_message(
+            event, MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"), app.account
+        )
