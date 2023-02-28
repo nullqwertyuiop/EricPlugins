@@ -4,22 +4,23 @@ import re
 import openai
 from creart import it
 from graia.ariadne import Ariadne
-from graia.ariadne.event.message import GroupMessage, FriendMessage
+from graia.ariadne.event.message import FriendMessage, GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image
 from graia.ariadne.message.parser.twilight import (
-    Twilight,
     FullMatch,
-    SpacePolicy,
-    WildcardMatch,
     RegexResult,
+    SpacePolicy,
+    Twilight,
+    UnionMatch,
+    WildcardMatch,
 )
 from graia.saya import Channel
-from graiax.shortcut import listen, dispatch, decorate
-from kayaku import create, config
+from graiax.shortcut import decorate, dispatch, listen
+from kayaku import config, create
 from loguru import logger
 
-from library.decorator import Switch, Distribution, Blacklist, FunctionCall, Permission
+from library.decorator import Blacklist, Distribution, FunctionCall, Permission, Switch
 from library.model.config import EricConfig
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
@@ -81,7 +82,9 @@ async def flush_openai_api_key(app: Ariadne, event: GroupMessage | FriendMessage
 )
 async def openai_dalle(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     if prompt := prompt.result.display:
-        return await send_message(event, await call_dalle(prompt), app.account, quote=event.source)
+        return await send_message(
+            event, await call_dalle(prompt), app.account, quote=event.source
+        )
     return await send_message(event, MessageChain("请输入 prompt"), app.account)
 
 
@@ -115,7 +118,7 @@ async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageC
         def get_text() -> str:
             response = openai.Completion.create(
                 model="text-davinci-003",
-                prompt="\n".join(_GPT_CACHE[key].copy()) + "\n[你]:",
+                prompt="\n".join(_GPT_CACHE[key][-cfg.gpt3_cache :]) + "\n[你]:",
                 temperature=0.5,
                 max_tokens=cfg.gpt3_max_token,
                 frequency_penalty=0.5,
@@ -127,7 +130,10 @@ async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageC
         try:
             resp = await asyncio.to_thread(get_text)
             _GPT_CACHE[key].append(f"[你]:{resp}")
-            _GPT_CACHE[key] = _GPT_CACHE[key][-cfg.gpt3_cache:]
+
+            # 防止内存泄漏
+            _GPT_CACHE[key] = _GPT_CACHE[key][-100:]
+
         except openai.error.OpenAIError as e:
             return MessageChain(f"运行时出现错误：{str(e)}")
 
@@ -152,7 +158,9 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     if prompt := prompt.result.display:
         await send_message(
             event,
-            await call_gpt3(prompt, int(event.sender.group), int(event.sender), event.sender.name),
+            await call_gpt3(
+                prompt, int(event.sender.group), int(event.sender), event.sender.name
+            ),
             app.account,
             quote=event.source,
         )
@@ -164,7 +172,10 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
 @dispatch(
     Twilight(
         PrefixMatch(),
-        FullMatch("openai gpt3 flush"),
+        FullMatch("openai"),
+        FullMatch("gpt3"),
+        FullMatch("flush"),
+        UnionMatch("all", "group", optional=True) @ "scope",
     )
 )
 @decorate(
@@ -173,7 +184,26 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     Blacklist.check(),
     FunctionCall.record(channel.module),
 )
-async def flush_openai_api_key(app: Ariadne, event: GroupMessage):
-    for key in _GPT_CACHE:
-        _GPT_CACHE[key] = []
-    await send_message(event, MessageChain("OpenAI GPT3 缓存已刷新"), app.account)
+async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult):
+    mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
+    scope: str = scope.result.display if scope.matched else "user"
+    match scope:
+        case "all":
+            if not Permission.check(event.sender, UserPerm.BOT_OWNER):
+                return await send_message(event, MessageChain("权限不足"), app.account)
+            for key in _GPT_CACHE:
+                _GPT_CACHE[key] = []
+        case "group":
+            if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
+                return await send_message(event, MessageChain("权限不足"), app.account)
+            for key in _GPT_CACHE:
+                if key.startswith(f"{int(event.sender.group)}-"):
+                    _GPT_CACHE[key] = []
+        case "user":
+            if (key := f"{int(event.sender.group)}-{int(event.sender)}") in _GPT_CACHE:
+                _GPT_CACHE[key] = []
+        case _:
+            return await send_message(event, MessageChain("未知范围"), app.account)
+    await send_message(
+        event, MessageChain(f"{mapping.get(scope)} OpenAI GPT3 缓存已刷新"), app.account
+    )
