@@ -105,6 +105,7 @@ async def call_dalle(prompt: str) -> MessageChain:
 
 
 _GPT_CACHE: dict[str, list[str]] = {}
+_GPT_MEMORY: dict[str, str] = {}
 
 
 async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageChain:
@@ -115,10 +116,14 @@ async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageC
         _GPT_CACHE.setdefault(key, [])
         _GPT_CACHE[key].append(f"[用户 {name}]:{prompt}")
 
+        final = "\n".join(_GPT_CACHE[key][-cfg.gpt3_cache :]) + "\n[你]:"
+        if memory := _GPT_MEMORY.get(key, None):
+            final = f"{memory}\n{final}"
+
         def get_text() -> str:
             response = openai.Completion.create(
                 model="text-davinci-003",
-                prompt="\n".join(_GPT_CACHE[key][-cfg.gpt3_cache :]) + "\n[你]:",
+                prompt=final,
                 temperature=0.5,
                 max_tokens=cfg.gpt3_max_token,
                 frequency_penalty=0.5,
@@ -193,17 +198,52 @@ async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult
                 return await send_message(event, MessageChain("权限不足"), app.account)
             for key in _GPT_CACHE:
                 _GPT_CACHE[key] = []
+            for key in _GPT_MEMORY.copy():
+                del _GPT_MEMORY[key]
         case "group":
             if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
                 return await send_message(event, MessageChain("权限不足"), app.account)
             for key in _GPT_CACHE:
                 if key.startswith(f"{int(event.sender.group)}-"):
                     _GPT_CACHE[key] = []
+            for key in _GPT_MEMORY.copy():
+                if key.startswith(f"{int(event.sender.group)}-"):
+                    del _GPT_MEMORY[key]
         case "user":
             if (key := f"{int(event.sender.group)}-{int(event.sender)}") in _GPT_CACHE:
                 _GPT_CACHE[key] = []
+            if key in _GPT_MEMORY:
+                del _GPT_MEMORY[key]
         case _:
             return await send_message(event, MessageChain("未知范围"), app.account)
     await send_message(
         event, MessageChain(f"{mapping.get(scope)} OpenAI GPT3 缓存已刷新"), app.account
     )
+
+
+@listen(GroupMessage)
+@dispatch(
+    Twilight(
+        PrefixMatch(),
+        FullMatch("openai"),
+        FullMatch("gpt3"),
+        FullMatch("memorize"),
+        WildcardMatch() @ "content",
+    )
+)
+@decorate(
+    Switch.check(channel.module),
+    Distribution.distribute(),
+    Blacklist.check(),
+    FunctionCall.record(channel.module),
+)
+async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult):
+    if content := content.result.display:
+        key = f"{int(event.sender.group)}-{int(event.sender)}"
+        overwrite = bool(_GPT_MEMORY.get(key, None))
+        _GPT_MEMORY[key] = content
+        await send_message(
+            event,
+            MessageChain(f"OpenAI GPT3 已记住该内容{'并覆盖旧有记忆' if overwrite else ''}"),
+            app.account,
+        )
