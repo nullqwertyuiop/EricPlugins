@@ -1,12 +1,12 @@
 {
     "name": "OpenAI",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "pack": "module.openai",
     "authors": [
         "nullqwertyuiop"
     ],
     "required": [],
-    "description": "提供 OpenAI API 的支持",
+    "description": "提供 OpenAI 官方 API 以及逆向 API 的支持",
     "category": [
         "utility:实用工具"
     ],
