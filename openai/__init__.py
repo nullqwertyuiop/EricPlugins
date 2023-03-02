@@ -1,6 +1,6 @@
 import asyncio
+import random
 import re
-from asyncio import Lock
 from dataclasses import field as dt_field
 
 import openai
@@ -52,11 +52,6 @@ class _OpenAIConfig:
 
 
 openai.api_key = create(_OpenAIConfig).api_key
-
-_CHAT_BOTS = [
-    AsyncChatbot(config={"email": _email, "password": _pw})
-    for _email, _pw in create(_OpenAIConfig).accounts.items()
-]
 # </editor-fold>
 
 
@@ -249,7 +244,9 @@ async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult
                     if key.startswith(f"{int(event.sender.group)}-"):
                         del _GPT_MEMORY[key]
             case "user":
-                if (key := f"{int(event.sender.group)}-{int(event.sender)}") in _GPT_CACHE:
+                if (
+                    key := f"{int(event.sender.group)}-{int(event.sender)}"
+                ) in _GPT_CACHE:
                     _GPT_CACHE[key] = []
                 if key in _GPT_MEMORY:
                     del _GPT_MEMORY[key]
@@ -297,29 +294,41 @@ async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult)
 
 
 # <editor-fold desc="revChatGPT Impl">
-_CHAT_GPT_CACHE: dict[int, dict[str, str]] = {}
+_CHAT_GPT_CACHE: dict[int, AsyncChatbot] = {}
 
 
-async def call_chatgpt(prompt: str, field: int, sender: int) -> MessageChain:
-    key = f"{field}-{sender}"
-    if it(LockSmith).get(f"{channel.module}:openai.{key}").locked():
+def exception_revchatgpt(e: revChatGPTError) -> MessageChain:
+    s = str(e)
+    if "Too many requests in 1 hour" in s:
+        return MessageChain("1 小时内请求次数过多，请稍后再试")
+    elif "Only one message at a time" in s:
+        return MessageChain("已有请求正在进行，请稍后再试")
+    return MessageChain(f"运行时出现错误：{s}")
+
+
+async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
+    if it(LockSmith).get(f"{channel.module}:openai.{field}").locked():
         return MessageChain("你先别急，还没说完")
-    async with it(LockSmith).get(f"{channel.module}:openai.{key}"):
-        for index, bot in enumerate(_CHAT_BOTS):
-            _BOT_CACHE = _CHAT_GPT_CACHE.setdefault(index, {})
-            try:
-                conv_id = _BOT_CACHE.get(key, None)
-                async for resp in bot.ask(prompt, conversation_id=conv_id):
-                    pass
-                _BOT_CACHE[key] = resp["conversation_id"]
-                return MessageChain(resp["message"])
-            except revChatGPTError as e:
-                if e.code == 2:
-                    continue
-                return MessageChain(f"运行时出现错误：{str(e)}")
-            except Exception as e:
-                return MessageChain(f"运行时出现错误：{str(e)}")
-        return MessageChain("运行时出现错误：暂无可用的 access_token")
+    async with it(LockSmith).get(f"{channel.module}:openai.{field}"):
+        cfg: _OpenAIConfig = create(_OpenAIConfig)
+        account = random.choice(list(cfg.accounts.items()))
+        bot = _CHAT_GPT_CACHE.setdefault(
+            field,
+            AsyncChatbot(
+                {
+                    "email": account[0],
+                    "password": account[1],
+                }
+            ),
+        )
+        try:
+            async for resp in bot.ask(prompt):
+                pass
+            return MessageChain(resp["message"])
+        except revChatGPTError as e:
+            return exception_revchatgpt(e)
+        except Exception as e:
+            return MessageChain(f"运行时出现意外错误：{str(e)}")
 
 
 # </editor-fold>
@@ -343,7 +352,7 @@ async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     if prompt := prompt.result.display:
         await send_message(
             event,
-            await call_chatgpt(prompt, int(event.sender.group), int(event.sender)),
+            await call_revchatgpt(prompt, int(event.sender.group)),
             app.account,
             quote=event.source,
         )
@@ -366,31 +375,38 @@ async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     FunctionCall.record(channel.module),
 )
 async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexResult):
-    mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
-    scope: str = scope.result.display if scope.matched else "user"
+    mapping: dict[str, str] = {"group": "群组", "all": "所有"}
+    scope: str = scope.result.display if scope.matched else "group"
+
+    async def del_group(_f: int) -> MessageChain | None:
+        try:
+            await _CHAT_GPT_CACHE[_f].delete_conversation(
+                _CHAT_GPT_CACHE[_f].conversation_id
+            )
+            del _CHAT_GPT_CACHE[_f]
+            logger.info(f"[OpenAI] Deleted conversation {_f}.")
+        except Exception as e:
+            logger.error(f"[OpenAI] Error while deleting conversation: {e}")
+            return MessageChain(f"删除会话时出现错误：{e}")
+
     async with it(LockSmith).get(channel.module):
         match scope:
             case "all":
                 if not Permission.check(event.sender, UserPerm.BOT_OWNER):
                     return await send_message(event, MessageChain("权限不足"), app.account)
-                for index in _CHAT_GPT_CACHE.copy():
-                    await _CHAT_BOTS[index].clear_conversations()
-                    del _CHAT_GPT_CACHE[index]
+                for key in _CHAT_GPT_CACHE.copy():
+                    if msg := await del_group(key):
+                        return await send_message(event, msg, app.account)
             case "group":
                 if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
                     return await send_message(event, MessageChain("权限不足"), app.account)
-                for index, cache in _CHAT_GPT_CACHE.items():
-                    for key in cache.copy():
-                        if key.startswith(f"{int(event.sender.group)}-"):
-                            await _CHAT_BOTS[index].delete_conversation(cache[key])
-                            del _CHAT_GPT_CACHE[index][key]
-            case "user":
-                for index, cache in _CHAT_GPT_CACHE.items():
-                    if (key := f"{int(event.sender.group)}-{int(event.sender)}") in cache:
-                        await _CHAT_BOTS[index].delete_conversation(cache[key])
-                        del _CHAT_GPT_CACHE[index][key]
+                if (key := int(event.sender.group)) in _CHAT_GPT_CACHE:
+                    if msg := await del_group(key):
+                        return await send_message(event, msg, app.account)
             case _:
                 return await send_message(event, MessageChain("未知范围"), app.account)
         await send_message(
-            event, MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"), app.account
+            event,
+            MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"),
+            app.account,
         )
