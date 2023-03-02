@@ -303,6 +303,8 @@ def exception_revchatgpt(e: Exception) -> MessageChain:
         return MessageChain("1 小时内请求次数过多，请稍后再试")
     elif "Only one message at a time" in s:
         return MessageChain("已有请求正在进行，请稍后再试")
+    elif "Hmm...something seems to have gone wrong" in s:
+        return MessageChain("呣...似乎有什么地方出错了，请稍后再试")
     return MessageChain(f"运行时出现意外错误：{s}")
 
 
