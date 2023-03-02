@@ -394,13 +394,13 @@ async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexRes
     async with it(LockSmith).get(channel.module):
         match scope:
             case "all":
-                if not Permission.check(event.sender, UserPerm.BOT_OWNER):
+                if not await Permission.check(event.sender, UserPerm.BOT_OWNER):
                     return await send_message(event, MessageChain("权限不足"), app.account)
                 for key in _CHAT_GPT_CACHE.copy():
                     if msg := await del_group(key):
                         return await send_message(event, msg, app.account)
             case "group":
-                if not Permission.check(event.sender, UserPerm.ADMINISTRATOR):
+                if not await Permission.check(event.sender, UserPerm.ADMINISTRATOR):
                     return await send_message(event, MessageChain("权限不足"), app.account)
                 if (key := int(event.sender.group)) in _CHAT_GPT_CACHE:
                     if msg := await del_group(key):
