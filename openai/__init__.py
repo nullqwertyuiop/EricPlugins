@@ -311,7 +311,9 @@ async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
         return MessageChain("你先别急，还没说完")
     async with it(LockSmith).get(f"{channel.module}:openai.{field}"):
         cfg: _OpenAIConfig = create(_OpenAIConfig)
+        random.seed(field)
         account = random.choice(list(cfg.accounts.items()))
+        random.seed()
         bot = _CHAT_GPT_CACHE.setdefault(
             field,
             AsyncChatbot(
