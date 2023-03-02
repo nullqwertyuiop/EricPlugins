@@ -1,6 +1,6 @@
 {
     "name": "OpenAI",
-    "version": "0.1.11",
+    "version": "0.1.12",
     "pack": "module.openai",
     "authors": [
         "nullqwertyuiop"

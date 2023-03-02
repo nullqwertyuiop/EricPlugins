@@ -297,13 +297,13 @@ async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult)
 _CHAT_GPT_CACHE: dict[int, AsyncChatbot] = {}
 
 
-def exception_revchatgpt(e: revChatGPTError) -> MessageChain:
+def exception_revchatgpt(e: Exception) -> MessageChain:
     s = str(e)
     if "Too many requests in 1 hour" in s:
         return MessageChain("1 小时内请求次数过多，请稍后再试")
     elif "Only one message at a time" in s:
         return MessageChain("已有请求正在进行，请稍后再试")
-    return MessageChain(f"运行时出现错误：{s}")
+    return MessageChain(f"运行时出现意外错误：{s}")
 
 
 async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
@@ -328,9 +328,10 @@ async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
                 pass
             return MessageChain(resp["message"])
         except revChatGPTError as e:
+            # 下次再说
             return exception_revchatgpt(e)
         except Exception as e:
-            return MessageChain(f"运行时出现意外错误：{str(e)}")
+            return exception_revchatgpt(e)
 
 
 # </editor-fold>
