@@ -1,9 +1,7 @@
 import asyncio
 from datetime import datetime
-from io import BytesIO
 
 import youtube_dl
-from PIL import Image as PillowImage
 from aiohttp import ClientSession
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image
@@ -13,7 +11,7 @@ from pydantic import BaseModel
 
 from library.model.config import EricConfig
 from library.module.file_server.util import serve_file, get_link
-from library.ui import Page, ColorSchema
+from library.ui import Page
 from library.ui.element import Banner, GenericBox, GenericBoxItem, ImageBox, VideoBox
 from library.util.misc import seconds_to_string
 from module.twitter_preview.logger import _TwitterPreviewLogger
@@ -173,7 +171,7 @@ class ParsedTweet(UnparsedTweet):
 
         page.add(
             GenericBox(
-                GenericBoxItem(text="正文", description=self.text, highlight=True)
+                GenericBoxItem(text="正文", description=self.text)
             ),
         )
 
