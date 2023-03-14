@@ -1,12 +1,17 @@
 import asyncio
-import random
+import json
+
+# import random
 import re
 from dataclasses import field as dt_field
+from pathlib import Path
+from typing import TypedDict, Literal
 
 import openai
 from creart import it
 from graia.ariadne import Ariadne
 from graia.ariadne.event.message import FriendMessage, GroupMessage
+from graia.ariadne.message import Source
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image
 from graia.ariadne.message.parser.twilight import (
@@ -16,13 +21,18 @@ from graia.ariadne.message.parser.twilight import (
     Twilight,
     UnionMatch,
     WildcardMatch,
+    ArgumentMatch,
+    ArgResult,
 )
+from graia.ariadne.model import Group
+from graia.broadcast.interrupt import InterruptControl, Waiter
 from graia.saya import Channel
-from graiax.shortcut import decorate, dispatch, listen
+from graiax.shortcut import decorate, dispatch, listen, priority
 from kayaku import config, create
 from loguru import logger
-from revChatGPT.V1 import AsyncChatbot
-from revChatGPT.V1 import Error as revChatGPTError
+
+# from revChatGPT.V1 import AsyncChatbot
+# from revChatGPT.V1 import Error as revChatGPTError
 
 from library.decorator import Blacklist, Distribution, FunctionCall, Permission, Switch
 from library.model.config import EricConfig
@@ -50,12 +60,24 @@ class _OpenAIConfig:
     accounts: dict[str, str] = dt_field(default_factory=dict)
     """ OpenAI 账号，格式为 {账号名: 密码} """
 
+    dalle_switch: bool = True
+    """ DallE 开关"""
+
+    gpt3_switch: bool = True
+    """ GPT-3 开关 """
+
+    chatgpt_switch: bool = True
+    """ ChatGPT 开关 """
+
 
 openai.api_key = create(_OpenAIConfig).api_key
 # </editor-fold>
 
 
 # <editor-fold desc="OpenAI API Key Flush">
+import contextlib
+
+
 @listen(GroupMessage, FriendMessage)
 @dispatch(
     Twilight(
@@ -116,6 +138,9 @@ async def call_dalle(prompt: str) -> MessageChain:
     FunctionCall.record(channel.module),
 )
 async def openai_dalle(app: Ariadne, event: GroupMessage, prompt: RegexResult):
+    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    if not cfg.dalle_switch:
+        return await send_message(event, MessageChain("DallE 功能未开放"), app.account)
     if prompt := prompt.result.display:
         return await send_message(
             event, await call_dalle(prompt), app.account, quote=event.source
@@ -189,6 +214,9 @@ async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageC
     FunctionCall.record(channel.module),
 )
 async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
+    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    if not cfg.gpt3_switch:
+        return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     if prompt := prompt.result.display:
         await send_message(
             event,
@@ -223,6 +251,9 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     FunctionCall.record(channel.module),
 )
 async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult):
+    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    if not cfg.gpt3_switch:
+        return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
     scope: str = scope.result.display if scope.matched else "user"
     async with it(LockSmith).get(channel.module):
@@ -278,6 +309,9 @@ async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult
     FunctionCall.record(channel.module),
 )
 async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult):
+    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    if not cfg.gpt3_switch:
+        return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     if content := content.result.display:
         key = f"{int(event.sender.group)}-{int(event.sender)}"
         overwrite = bool(_GPT_MEMORY.get(key, None))
@@ -293,76 +327,353 @@ async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult)
 # </editor-fold>
 
 
-# <editor-fold desc="revChatGPT Impl">
-_CHAT_GPT_CACHE: dict[int, AsyncChatbot] = {}
+# # <editor-fold desc="revChatGPT">
+# # <editor-fold desc="revChatGPT Impl">
+# _CHAT_GPT_CACHE: dict[int, AsyncChatbot] = {}
+#
+#
+# def exception_revchatgpt(e: Exception) -> MessageChain:
+#     s = str(e)
+#     if "Too many requests in 1 hour" in s:
+#         return MessageChain("1 小时内请求次数过多，请稍后再试")
+#     elif "Only one message at a time" in s:
+#         return MessageChain("已有请求正在进行，请稍后再试")
+#     elif "Hmm...something seems to have gone wrong" in s:
+#         return MessageChain("呣...似乎有什么地方出错了，请稍后再试")
+#     return MessageChain(f"运行时出现意外错误：{s}")
+#
+#
+# async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
+#     if it(LockSmith).get(f"{channel.module}:revchatgpt.{field}").locked():
+#         return MessageChain("你先别急，还没说完")
+#     async with it(LockSmith).get(f"{channel.module}:openai.{field}"):
+#         cfg: _OpenAIConfig = create(_OpenAIConfig)
+#         random.seed(field)
+#         account = random.choice(list(cfg.accounts.items()))
+#         random.seed()
+#         bot = _CHAT_GPT_CACHE.setdefault(
+#             field,
+#             AsyncChatbot(
+#                 {
+#                     "email": account[0],
+#                     "password": account[1],
+#                 }
+#             ),
+#         )
+#         try:
+#             async for resp in bot.ask(prompt):
+#                 pass
+#             return MessageChain(resp["message"])
+#         except revChatGPTError as e:
+#             # 下次再说
+#             return exception_revchatgpt(e)
+#         except Exception as e:
+#             return exception_revchatgpt(e)
+#
+#
+# # </editor-fold>
+#
+#
+# # <editor-fold desc="revChatGPT Prompt">
+# @listen(GroupMessage)
+# @dispatch(
+#     Twilight(
+#         PrefixMatch(),
+#         FullMatch("chatgpt"),
+#         WildcardMatch().flags(re.S) @ "prompt",
+#     )
+# )
+# @decorate(
+#     Switch.check(channel.module),
+#     Distribution.distribute(),
+#     Blacklist.check(),
+#     FunctionCall.record(channel.module),
+# )
+# async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
+#     if prompt := prompt.result.display:
+#         await send_message(
+#             event,
+#             await call_revchatgpt(prompt, int(event.sender.group)),
+#             app.account,
+#             quote=event.source,
+#         )
+# # </editor-fold>
+#
+#
+# # <editor-fold desc="revChatGPT Cache Flush">
+# @listen(GroupMessage)
+# @dispatch(
+#     Twilight(
+#         PrefixMatch(),
+#         FullMatch("openai"),
+#         FullMatch("chatgpt"),
+#         FullMatch("flush"),
+#         UnionMatch("all", "group", optional=True) @ "scope",
+#     )
+# )
+# @decorate(
+#     Switch.check(channel.module),
+#     Distribution.distribute(),
+#     Blacklist.check(),
+#     FunctionCall.record(channel.module),
+# )
+# async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexResult):
+#     mapping: dict[str, str] = {"group": "群组", "all": "所有"}
+#     scope: str = scope.result.display if scope.matched else "group"
+#
+#     async def del_group(_f: int) -> MessageChain | None:
+#         try:
+#             await _CHAT_GPT_CACHE[_f].delete_conversation(
+#                 _CHAT_GPT_CACHE[_f].conversation_id
+#             )
+#             del _CHAT_GPT_CACHE[_f]
+#             logger.info(f"[OpenAI] Deleted conversation {_f}.")
+#         except Exception as e:
+#             logger.error(f"[OpenAI] Error while deleting conversation: {e}")
+#             return MessageChain(f"删除会话时出现错误：{e}")
+#
+#     async with it(LockSmith).get(channel.module):
+#         match scope:
+#             case "all":
+#                 if not await Permission.check(event.sender, UserPerm.BOT_OWNER):
+#                     return await send_message(event, MessageChain("权限不足"), app.account)
+#                 for key in _CHAT_GPT_CACHE.copy():
+#                     if msg := await del_group(key):
+#                         return await send_message(event, msg, app.account)
+#             case "group":
+#                 if not await Permission.check(event.sender, UserPerm.ADMINISTRATOR):
+#                     return await send_message(event, MessageChain("权限不足"), app.account)
+#                 if (key := int(event.sender.group)) in _CHAT_GPT_CACHE:
+#                     if msg := await del_group(key):
+#                         return await send_message(event, msg, app.account)
+#             case _:
+#                 return await send_message(event, MessageChain("未知范围"), app.account)
+#         await send_message(
+#             event,
+#             MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"),
+#             app.account,
+#         )
+# # </editor-fold>
+# # </editor-fold>
 
 
-def exception_revchatgpt(e: Exception) -> MessageChain:
-    s = str(e)
-    if "Too many requests in 1 hour" in s:
-        return MessageChain("1 小时内请求次数过多，请稍后再试")
-    elif "Only one message at a time" in s:
-        return MessageChain("已有请求正在进行，请稍后再试")
-    elif "Hmm...something seems to have gone wrong" in s:
-        return MessageChain("呣...似乎有什么地方出错了，请稍后再试")
-    return MessageChain(f"运行时出现意外错误：{s}")
+# <editor-fold desc="OpenAI ChatGPT w/ preset">
+# <editor-fold desc="OpenAI ChatGPT Cache Store">
+class _ChatGPTPreset(TypedDict):
+    name: str
+    description: str
+    content: str
 
 
-async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
-    if it(LockSmith).get(f"{channel.module}:openai.{field}").locked():
-        return MessageChain("你先别急，还没说完")
-    async with it(LockSmith).get(f"{channel.module}:openai.{field}"):
-        cfg: _OpenAIConfig = create(_OpenAIConfig)
-        random.seed(field)
-        account = random.choice(list(cfg.accounts.items()))
-        random.seed()
-        bot = _CHAT_GPT_CACHE.setdefault(
-            field,
-            AsyncChatbot(
-                {
-                    "email": account[0],
-                    "password": account[1],
-                }
-            ),
+class _ChatGPTLine(TypedDict):
+    role: str
+    content: str
+
+
+class _ChatGPTStore:
+    presets: dict[str, _ChatGPTPreset]
+    cache: dict[int, list[_ChatGPTLine]]
+    in_session: set[int]
+
+    def __init__(self):
+        self.presets = {}
+        self.cache = {}
+        self.in_session = set()
+        self.load_presets()
+
+    def load_presets(self):
+        data = (Path(__file__).parent / "assets" / "presets.json").read_text("utf-8")
+        self.presets = json.loads(data)
+
+    def fill_preset(self, name: str, field: int):
+        if name in self.presets:
+            preset: _ChatGPTPreset = self.presets[name]
+        else:
+            preset = next(filter(lambda x: x["name"] == name, self.presets.values()))
+        self.cache.setdefault(field, [])
+        self.cache[field].insert(0, {"role": "system", "content": preset["content"]})
+
+    def flush(self, field: int, keep_system: bool = True):
+        self.cache.setdefault(field, [])
+        has_system: bool = (
+            len(self.cache[field]) and self.cache[field][0]["role"] == "system"
         )
-        try:
-            async for resp in bot.ask(prompt):
-                pass
-            return MessageChain(resp["message"])
-        except revChatGPTError as e:
-            # 下次再说
-            return exception_revchatgpt(e)
-        except Exception as e:
-            return exception_revchatgpt(e)
+        self.cache[field] = self.cache[field][:1] if has_system and keep_system else []
+
+    def flush_all(self, keep_system: bool = True):
+        for key in self.cache:
+            self.flush(key, keep_system=keep_system)
+
+    def pop_head(self, field: int):
+        self.cache.setdefault(field, [])
+        has_system: bool = (
+            len(self.cache[field]) and self.cache[field][0]["role"] == "system"
+        )
+        self.cache[field].pop(1 if has_system else 0)
+
+    def get(self, field: int):
+        self.cache.setdefault(field, [])
+        return self.cache[field]
+
+    def add(self, field: int, role: Literal["user", "assistant"], content: str):
+        self.cache.setdefault(field, [])
+        self.cache[field].append({"role": role, "content": content})
+
+
+_chatgpt_store = _ChatGPTStore()
+# </editor-fold>
+
+
+# <editor-fold desc="OpenAI ChatGPT Impl">
+async def call_chatgpt(prompt: str, field: int) -> MessageChain:
+    if it(LockSmith).get(f"{channel.module}:chatgpt.{field}").locked():
+        return MessageChain("你先别急，还没说完")
+    async with it(LockSmith).get(f"{channel.module}:chatgpt.{field}"):
+        logger.info(f"[OpenAI:ChatGPT] Generating text for {field}: {prompt}")
+        _chatgpt_store.add(field, "user", prompt)
+
+        def get_text() -> str:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo", messages=_chatgpt_store.get(field)
+            )
+            return response["choices"][0]["message"]["content"]
+
+        pops = 3
+        while (pops := pops - 1) >= 0:
+            try:
+                resp = await asyncio.to_thread(get_text)
+                _chatgpt_store.add(field, "assistant", resp)
+                return MessageChain(resp)
+
+            except openai.error.OpenAIError as e:
+                if "maximum context length" in (e := str(e)):
+                    _chatgpt_store.pop_head(field)
+                    continue
+                _chatgpt_store.cache[field].pop()
+                return MessageChain(f"运行时出现错误：{e}")
 
 
 # </editor-fold>
 
 
-@listen(GroupMessage)
-@dispatch(
-    Twilight(
-        PrefixMatch(),
-        FullMatch("chatgpt"),
-        WildcardMatch().flags(re.S) @ "prompt",
-    )
+# <editor-fold desc="OpenAI ChatGPT Prompt">
+class _ChatGPTWaiter(Waiter.create([GroupMessage])):
+    def __init__(self, group: Group | int, *sources: Source | int):
+        self.group_id = int(group)
+        self.sources = {int(source) for source in sources}
+
+    async def detected_event(
+        self,
+        app: Ariadne,
+        group: Group,
+        event: GroupMessage,
+    ):
+        await Distribution.judge(app, event, event.source)
+        if int(group) != self.group_id:
+            return
+        if event.quote and event.quote.id in self.sources:
+            return event
+        with contextlib.suppress(ValueError):
+            if Twilight(
+                PrefixMatch(),
+                FullMatch("chatgpt"),
+                WildcardMatch().flags(re.S) @ "prompt",
+            ).generate(event.message_chain):
+                return event
+
+
+_CHATGPT_TWILIGHT = Twilight(
+    PrefixMatch(),
+    FullMatch("chatgpt"),
+    ArgumentMatch("-p", "--preset", optional=True, type=str) @ "preset",
+    WildcardMatch().flags(re.S) @ "prompt",
 )
+
+
+@listen(GroupMessage)
+@dispatch(_CHATGPT_TWILIGHT)
 @decorate(
     Switch.check(channel.module),
     Distribution.distribute(),
     Blacklist.check(),
     FunctionCall.record(channel.module),
 )
-async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
-    if prompt := prompt.result.display:
-        await send_message(
+async def chatgpt(
+    app: Ariadne, event: GroupMessage, preset: ArgResult, prompt: RegexResult
+):
+    if (gid := int(event.sender.group)) in _chatgpt_store.in_session:
+        return
+    if preset.matched:
+        if (preset.result not in _chatgpt_store.presets) and not next(
+            filter(
+                lambda x: x.get("name", "") == preset.result,
+                _chatgpt_store.presets.values(),
+            ),
+            None,
+        ):
+            return await send_message(
+                event,
+                MessageChain(
+                    f"预设 {preset.result} 不存在，当前内置预设：\n"
+                    + "\n".join(
+                        [
+                            f"{i} ({v['name']})：{v['description']}"
+                            for i, v in _chatgpt_store.presets.items()
+                        ]
+                    )
+                ),
+                app.account,
+            )
+        _chatgpt_store.fill_preset(preset.result, gid)
+    if not (prompt := prompt.result.display) or not (
+        msg := await send_message(
             event,
-            await call_revchatgpt(prompt, int(event.sender.group)),
+            await call_chatgpt(prompt, gid),
             app.account,
             quote=event.source,
         )
+    ):
+        return
+    try:
+        _chatgpt_store.in_session.add(gid)
+        sources = {int(msg.source)}
+        while gid in _chatgpt_store.in_session:
+            if waiter_msg := await it(InterruptControl).wait(
+                _ChatGPTWaiter(
+                    event.sender.group,
+                    *sources,
+                ),
+                timeout=600,
+            ):
+                if gid not in _chatgpt_store.in_session:
+                    return
+                waiter_msg: GroupMessage
+                try:
+                    prompt = (
+                        _CHATGPT_TWILIGHT.generate(waiter_msg.message_chain)
+                        .get("prompt")
+                        .result.display
+                    )
+                except (KeyError, ValueError):
+                    prompt = waiter_msg.message_chain.display
+                if reply := await send_message(
+                    waiter_msg,
+                    await call_chatgpt(prompt, gid),
+                    app.account,
+                    quote=waiter_msg.source,
+                ):
+                    sources.add(int(reply.source))
+    except asyncio.exceptions.TimeoutError:
+        return
+    finally:
+        if gid in _chatgpt_store.in_session:
+            _chatgpt_store.in_session.remove(gid)
 
 
+# </editor-fold>
+
+
+# <editor-fold desc="OpenAI ChatGPT Cache Flush">
 @listen(GroupMessage)
 @dispatch(
     Twilight(
@@ -371,6 +682,7 @@ async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
         FullMatch("chatgpt"),
         FullMatch("flush"),
         UnionMatch("all", "group", optional=True) @ "scope",
+        ArgumentMatch("-s", "--system", action="store_true", default=False) @ "system",
     )
 )
 @decorate(
@@ -379,35 +691,28 @@ async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     Blacklist.check(),
     FunctionCall.record(channel.module),
 )
-async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexResult):
+@priority(10)
+async def flush_chat_gpt_conv(
+    app: Ariadne, event: GroupMessage, scope: RegexResult, system: ArgResult
+):
     mapping: dict[str, str] = {"group": "群组", "all": "所有"}
     scope: str = scope.result.display if scope.matched else "group"
-
-    async def del_group(_f: int) -> MessageChain | None:
-        try:
-            await _CHAT_GPT_CACHE[_f].delete_conversation(
-                _CHAT_GPT_CACHE[_f].conversation_id
-            )
-            del _CHAT_GPT_CACHE[_f]
-            logger.info(f"[OpenAI] Deleted conversation {_f}.")
-        except Exception as e:
-            logger.error(f"[OpenAI] Error while deleting conversation: {e}")
-            return MessageChain(f"删除会话时出现错误：{e}")
-
+    flush_system: bool = system.result
     async with it(LockSmith).get(channel.module):
         match scope:
             case "all":
                 if not await Permission.check(event.sender, UserPerm.BOT_OWNER):
                     return await send_message(event, MessageChain("权限不足"), app.account)
-                for key in _CHAT_GPT_CACHE.copy():
-                    if msg := await del_group(key):
-                        return await send_message(event, msg, app.account)
+                _chatgpt_store.flush_all(keep_system=not flush_system)
+                _chatgpt_store.in_session.clear()
             case "group":
                 if not await Permission.check(event.sender, UserPerm.ADMINISTRATOR):
                     return await send_message(event, MessageChain("权限不足"), app.account)
-                if (key := int(event.sender.group)) in _CHAT_GPT_CACHE:
-                    if msg := await del_group(key):
-                        return await send_message(event, msg, app.account)
+                _chatgpt_store.flush(
+                    int(event.sender.group), keep_system=not flush_system
+                )
+                if int(event.sender.group) in _chatgpt_store.in_session:
+                    _chatgpt_store.in_session.remove(int(event.sender.group))
             case _:
                 return await send_message(event, MessageChain("未知范围"), app.account)
         await send_message(
@@ -415,3 +720,7 @@ async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexRes
             MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"),
             app.account,
         )
+
+
+# </editor-fold>
+# </editor-fold>
