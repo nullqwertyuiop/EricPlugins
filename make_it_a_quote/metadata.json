@@ -1,6 +1,6 @@
 {
     "name": "入典",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "pack": "module.make_it_a_quote",
     "authors": [
         "nullqwertyuiop"

@@ -151,9 +151,10 @@ html_string = """
              justify-content: center;
              align-items: center;
              flex-direction: column;
+             text-align: center;
     ">
         <p class="text text-margin"> {text} </p>
-        <p class="subtext text-margin"> {subtext} </p>
+        <p class="subtext text-margin" style="text-align: center;"> {subtext} </p>
     </div>
 </div>
 </body>
