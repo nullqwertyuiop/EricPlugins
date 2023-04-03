@@ -1,4 +1,5 @@
 import asyncio
+import random
 import re
 import time
 from datetime import datetime
@@ -7,7 +8,6 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from PIL import Image as PillowImage
 from creart import it
 from dateutil.relativedelta import relativedelta
 from graia.ariadne import Ariadne
@@ -15,21 +15,22 @@ from graia.ariadne.event.message import GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Image
 from graia.ariadne.message.parser.twilight import (
-    Twilight,
-    UnionMatch,
     FullMatch,
     RegexResult,
+    Twilight,
+    UnionMatch,
 )
 from graia.saya import Channel
-from graiax.shortcut import listen, dispatch, decorate
+from graiax.shortcut import decorate, dispatch, listen
 from jieba.analyse import extract_tags
 from loguru import logger
-from sqlalchemy import select, func
-from wordcloud import WordCloud, ImageColorGenerator
+from PIL import Image as PillowImage
+from sqlalchemy import func, select
+from wordcloud import ImageColorGenerator, WordCloud
 
-from library.decorator import Switch, Distribution, Blacklist, FunctionCall
+from library.decorator import Blacklist, Distribution, FunctionCall, Switch
 from library.module.recorder import MessageRecord
-from library.ui import Page, Banner, GenericBox, GenericBoxItem, ImageBox
+from library.ui import Banner, GenericBox, GenericBoxItem, ImageBox, Page
 from library.ui.color import is_dark
 from library.util.dispatcher import PrefixMatch
 from library.util.locksmith import LockSmith
@@ -153,7 +154,9 @@ class WCFilter:
     def __init__(self):
         self.keys = set()
         self.load_txt(Path(__file__).parent / "assets" / "filter.txt")
-        if (custom := (it(Modules).get(channel.module)).data_path / "filter.txt").is_file():
+        if (
+            custom := (it(Modules).get(channel.module)).data_path / "filter.txt"
+        ).is_file():
             self.load_txt(custom)
 
     def load_txt(self, path: Path):
@@ -183,20 +186,14 @@ async def get_frequency(
         .order_by(MessageRecord.time.desc())  # type: ignore
         .limit(item_count)
     )
-    result = {}
     content = ""
     for (item,) in cursor.yield_per(1):
-        item = _filter.filter(item)
-        if not item:
-            continue
-        content += f" {item}"
+        if item := _filter.filter(item):
+            content += f" {item}"
     jieba_analyse = extract_tags(content, topK=None, withWeight=True)
-    for word, weight in jieba_analyse:
-        result[word] = weight
-    return {
-        k: v
-        for k, v in sorted(result.items(), key=lambda x: x[1], reverse=True)[:kw_count]
-    }
+    return dict(
+        sorted(dict(jieba_analyse).items(), key=lambda x: x[1], reverse=True)[:kw_count]
+    )
 
 
 async def get_count(*conditions: ...) -> int:
@@ -238,10 +235,12 @@ async def async_generate_wordcloud(
 
 def read_mask():
     data_path = it(Modules).get(channel.module).data_path
-    for file in (
+    if masks := (
         set(data_path.glob("*.png"))
         | set(data_path.glob("*.jpg"))
         | set(data_path.glob("*.jpeg"))
     ):
-        return np.array(PillowImage.open(file))  # type: ignore
+        return np.array(
+            PillowImage.open(random.choice(list(masks)))  # type: ignore
+        )
     return None
