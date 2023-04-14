@@ -186,13 +186,14 @@ async def get_frequency(
         .order_by(MessageRecord.time.desc())  # type: ignore
         .limit(item_count)
     )
-    content = ""
+    result = {}
     for (item,) in cursor.yield_per(1):
-        if item := _filter.filter(item):
-            content += f" {item}"
-    jieba_analyse = extract_tags(content, topK=None, withWeight=True)
+        item = _filter.filter(item)
+        jieba_analyse = extract_tags(item, topK=None, withWeight=True)
+        for word, weight in jieba_analyse:
+            result[word] = result.get(word, 0) + weight
     return dict(
-        sorted(dict(jieba_analyse).items(), key=lambda x: x[1], reverse=True)[:kw_count]
+        sorted(result.items(), key=lambda x: x[1], reverse=True)[:kw_count]
     )
 
 
