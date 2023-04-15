@@ -52,7 +52,7 @@ channel = Channel.current()
 async def make_it_a_quote(
     app: Ariadne,
     event: MessageEvent,
-    who: ArgResult,
+    as_who: ArgResult,
     name: ArgResult,
     color: ArgResult,
     content: RegexResult,
@@ -70,7 +70,7 @@ async def make_it_a_quote(
         except UnknownTarget:
             return await send_message(event, MessageChain("暂未缓存该消息"), app.account)
     text = html.escape(text).replace("\n", "<br>")
-    uin = int(who.result) if who.matched else int(event.sender)
+    uin = int(as_who.result) if as_who.matched else int(event.sender)
     subtext = name.result if name.matched else event.sender.name
     _html = html_string.format(
         url=f"https://q2.qlogo.cn/headimg_dl?dst_uin={uin}&spec=640",
