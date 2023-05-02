@@ -638,7 +638,8 @@ async def chat_completion_init(
 @listen(GroupMessage)
 @decorate(
     Switch.check(channel.module, show_log=False),
-    QuotingOrAtMe(one_at=True),  # 限制了只能 at 一个，所以不用再 distribute()
+    QuotingOrAtMe(),
+    Distribution.distribute(),
     Blacklist.check(),
 )
 async def chat_completion_impl_group(
