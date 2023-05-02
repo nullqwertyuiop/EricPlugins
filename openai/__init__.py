@@ -1,11 +1,10 @@
 import asyncio
+import contextlib
 import json
-
-# import random
+import random
 import re
-from dataclasses import field as dt_field
 from pathlib import Path
-from typing import TypedDict, Literal
+from typing import Literal, TypedDict
 
 import openai
 from creart import it
@@ -13,69 +12,42 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import FriendMessage, GroupMessage
 from graia.ariadne.message import Source
 from graia.ariadne.message.chain import MessageChain
-from graia.ariadne.message.element import Image
+from graia.ariadne.message.element import Image, Plain
 from graia.ariadne.message.parser.twilight import (
+    ArgResult,
+    ArgumentMatch,
     FullMatch,
     RegexResult,
     SpacePolicy,
     Twilight,
     UnionMatch,
     WildcardMatch,
-    ArgumentMatch,
-    ArgResult,
 )
 from graia.ariadne.model import Group
 from graia.broadcast.interrupt import InterruptControl, Waiter
 from graia.saya import Channel
 from graiax.shortcut import decorate, dispatch, listen, priority
-from kayaku import config, create
+from kayaku import create
 from loguru import logger
 
-# from revChatGPT.V1 import AsyncChatbot
-# from revChatGPT.V1 import Error as revChatGPTError
-
 from library.decorator import Blacklist, Distribution, FunctionCall, Permission, Switch
+from library.decorator.chain import QuotingOrAtMe
 from library.model.config import EricConfig
+from library.model.message import RebuiltMessage
 from library.model.permission import UserPerm
 from library.util.dispatcher import PrefixMatch
 from library.util.locksmith import LockSmith
 from library.util.message import send_message
 from library.util.session_container import SessionContainer
+from library.util.typ import Message
+from module.openai.config import OpenAIConfig
+from module.openai.impl import ChatSessionContainer
 
 channel = Channel.current()
 
-
-# <editor-fold desc="OpenAI Config">
-@config(channel.module)
-class _OpenAIConfig:
-    api_key: str = ""
-    """ OpenAI API Key """
-
-    gpt3_cache: int = 2
-    """ GPT-3 缓存对话数量 """
-
-    gpt3_max_token: int = 2000
-    """ GPT-3 最大 Token 数量 """
-
-    accounts: dict[str, str] = dt_field(default_factory=dict)
-    """ OpenAI 账号，格式为 {账号名: 密码} """
-
-    dalle_switch: bool = True
-    """ DallE 开关"""
-
-    gpt3_switch: bool = True
-    """ GPT-3 开关 """
-
-    chatgpt_switch: bool = True
-    """ ChatGPT 开关 """
-
-
-openai.api_key = create(_OpenAIConfig).api_key
-# </editor-fold>
-
+openai.api_key = random.choice(create(OpenAIConfig).api_keys)
 
 # <editor-fold desc="OpenAI API Key Flush">
-import contextlib
 
 
 @listen(GroupMessage, FriendMessage)
@@ -93,7 +65,7 @@ import contextlib
     FunctionCall.record(channel.module),
 )
 async def flush_openai_api_key(app: Ariadne, event: GroupMessage | FriendMessage):
-    openai_config: _OpenAIConfig = create(_OpenAIConfig, flush=True)
+    openai_config: OpenAIConfig = create(OpenAIConfig, flush=True)
     openai.api_key = openai_config.api_key
     await send_message(event, MessageChain("OpenAI API Key 已刷新"), app.account)
 
@@ -138,7 +110,7 @@ async def call_dalle(prompt: str) -> MessageChain:
     FunctionCall.record(channel.module),
 )
 async def openai_dalle(app: Ariadne, event: GroupMessage, prompt: RegexResult):
-    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    cfg: OpenAIConfig = create(OpenAIConfig)
     if not cfg.dalle_switch:
         return await send_message(event, MessageChain("DallE 功能未开放"), app.account)
     if prompt := prompt.result.display:
@@ -160,7 +132,7 @@ _GPT_MEMORY: dict[str, str] = {}
 
 async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageChain:
     key = f"{field}-{sender}"
-    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    cfg: OpenAIConfig = create(OpenAIConfig)
     async with it(LockSmith).get(f"{channel.module}:gpt3.{key}"):
         logger.info(f"[OpenAI:GPT3] Generating text for {key}: {prompt}")
         _GPT_CACHE.setdefault(key, [])
@@ -214,7 +186,7 @@ async def call_gpt3(prompt: str, field: int, sender: int, name: str) -> MessageC
     FunctionCall.record(channel.module),
 )
 async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
-    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    cfg: OpenAIConfig = create(OpenAIConfig)
     if not cfg.gpt3_switch:
         return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     if prompt := prompt.result.display:
@@ -251,7 +223,7 @@ async def openai_gpt3(app: Ariadne, event: GroupMessage, prompt: RegexResult):
     FunctionCall.record(channel.module),
 )
 async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult):
-    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    cfg: OpenAIConfig = create(OpenAIConfig)
     if not cfg.gpt3_switch:
         return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     mapping: dict[str, str] = {"group": "群组", "all": "所有", "user": "用户"}
@@ -309,7 +281,7 @@ async def flush_gpt3_cache(app: Ariadne, event: GroupMessage, scope: RegexResult
     FunctionCall.record(channel.module),
 )
 async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult):
-    cfg: _OpenAIConfig = create(_OpenAIConfig)
+    cfg: OpenAIConfig = create(OpenAIConfig)
     if not cfg.gpt3_switch:
         return await send_message(event, MessageChain("GPT-3 功能未开放"), app.account)
     if content := content.result.display:
@@ -325,136 +297,6 @@ async def gpt3_memorize(app: Ariadne, event: GroupMessage, content: RegexResult)
 
 # </editor-fold>
 # </editor-fold>
-
-
-# # <editor-fold desc="revChatGPT">
-# # <editor-fold desc="revChatGPT Impl">
-# _CHAT_GPT_CACHE: dict[int, AsyncChatbot] = {}
-#
-#
-# def exception_revchatgpt(e: Exception) -> MessageChain:
-#     s = str(e)
-#     if "Too many requests in 1 hour" in s:
-#         return MessageChain("1 小时内请求次数过多，请稍后再试")
-#     elif "Only one message at a time" in s:
-#         return MessageChain("已有请求正在进行，请稍后再试")
-#     elif "Hmm...something seems to have gone wrong" in s:
-#         return MessageChain("呣...似乎有什么地方出错了，请稍后再试")
-#     return MessageChain(f"运行时出现意外错误：{s}")
-#
-#
-# async def call_revchatgpt(prompt: str, field: int) -> MessageChain:
-#     if it(LockSmith).get(f"{channel.module}:revchatgpt.{field}").locked():
-#         return MessageChain("你先别急，还没说完")
-#     async with it(LockSmith).get(f"{channel.module}:openai.{field}"):
-#         cfg: _OpenAIConfig = create(_OpenAIConfig)
-#         random.seed(field)
-#         account = random.choice(list(cfg.accounts.items()))
-#         random.seed()
-#         bot = _CHAT_GPT_CACHE.setdefault(
-#             field,
-#             AsyncChatbot(
-#                 {
-#                     "email": account[0],
-#                     "password": account[1],
-#                 }
-#             ),
-#         )
-#         try:
-#             async for resp in bot.ask(prompt):
-#                 pass
-#             return MessageChain(resp["message"])
-#         except revChatGPTError as e:
-#             # 下次再说
-#             return exception_revchatgpt(e)
-#         except Exception as e:
-#             return exception_revchatgpt(e)
-#
-#
-# # </editor-fold>
-#
-#
-# # <editor-fold desc="revChatGPT Prompt">
-# @listen(GroupMessage)
-# @dispatch(
-#     Twilight(
-#         PrefixMatch(),
-#         FullMatch("chatgpt"),
-#         WildcardMatch().flags(re.S) @ "prompt",
-#     )
-# )
-# @decorate(
-#     Switch.check(channel.module),
-#     Distribution.distribute(),
-#     Blacklist.check(),
-#     FunctionCall.record(channel.module),
-# )
-# async def chatgpt(app: Ariadne, event: GroupMessage, prompt: RegexResult):
-#     if prompt := prompt.result.display:
-#         await send_message(
-#             event,
-#             await call_revchatgpt(prompt, int(event.sender.group)),
-#             app.account,
-#             quote=event.source,
-#         )
-# # </editor-fold>
-#
-#
-# # <editor-fold desc="revChatGPT Cache Flush">
-# @listen(GroupMessage)
-# @dispatch(
-#     Twilight(
-#         PrefixMatch(),
-#         FullMatch("openai"),
-#         FullMatch("chatgpt"),
-#         FullMatch("flush"),
-#         UnionMatch("all", "group", optional=True) @ "scope",
-#     )
-# )
-# @decorate(
-#     Switch.check(channel.module),
-#     Distribution.distribute(),
-#     Blacklist.check(),
-#     FunctionCall.record(channel.module),
-# )
-# async def flush_chat_gpt_conv(app: Ariadne, event: GroupMessage, scope: RegexResult):
-#     mapping: dict[str, str] = {"group": "群组", "all": "所有"}
-#     scope: str = scope.result.display if scope.matched else "group"
-#
-#     async def del_group(_f: int) -> MessageChain | None:
-#         try:
-#             await _CHAT_GPT_CACHE[_f].delete_conversation(
-#                 _CHAT_GPT_CACHE[_f].conversation_id
-#             )
-#             del _CHAT_GPT_CACHE[_f]
-#             logger.info(f"[OpenAI] Deleted conversation {_f}.")
-#         except Exception as e:
-#             logger.error(f"[OpenAI] Error while deleting conversation: {e}")
-#             return MessageChain(f"删除会话时出现错误：{e}")
-#
-#     async with it(LockSmith).get(channel.module):
-#         match scope:
-#             case "all":
-#                 if not await Permission.check(event.sender, UserPerm.BOT_OWNER):
-#                     return await send_message(event, MessageChain("权限不足"), app.account)
-#                 for key in _CHAT_GPT_CACHE.copy():
-#                     if msg := await del_group(key):
-#                         return await send_message(event, msg, app.account)
-#             case "group":
-#                 if not await Permission.check(event.sender, UserPerm.ADMINISTRATOR):
-#                     return await send_message(event, MessageChain("权限不足"), app.account)
-#                 if (key := int(event.sender.group)) in _CHAT_GPT_CACHE:
-#                     if msg := await del_group(key):
-#                         return await send_message(event, msg, app.account)
-#             case _:
-#                 return await send_message(event, MessageChain("未知范围"), app.account)
-#         await send_message(
-#             event,
-#             MessageChain(f"{mapping.get(scope)} OpenAI ChatGPT 会话已清除"),
-#             app.account,
-#         )
-# # </editor-fold>
-# # </editor-fold>
 
 
 # <editor-fold desc="OpenAI ChatGPT w/ preset">
@@ -724,3 +566,100 @@ async def flush_chat_gpt_conv(
 
 # </editor-fold>
 # </editor-fold>
+
+
+@listen(GroupMessage, FriendMessage)
+@dispatch(
+    Twilight(
+        PrefixMatch(),
+        FullMatch("chat"),
+        ArgumentMatch("--set-system", type=str, default="") @ "system_prompt",
+        ArgumentMatch("-f", "--flush", action="store_true", default=False) @ "flush",
+        ArgumentMatch("-s", "--system", action="store_true", default=False)
+        @ "flush_system",
+        ArgumentMatch("-x", "--export", action="store_true", default=False) @ "export",
+    )
+)
+@decorate(
+    Switch.check(channel.module),
+    Distribution.distribute(),
+    Blacklist.check(),
+    FunctionCall.record(channel.module),
+)
+async def chat_completion_init(
+    app: Ariadne,
+    event: Message,
+    system_prompt: ArgResult,
+    flush: ArgResult,
+    flush_system: ArgResult,
+    export: ArgResult,
+):
+    system_prompt: str = system_prompt.result
+    flush: bool = flush.result
+    flush_system: bool = flush_system.result
+    export: bool = export.result
+    if system_prompt != "" and (flush or flush_system or export):
+        return await send_message(
+            event,
+            MessageChain("参数错误，--set-system 与 --flush/--system/--export 不能同时使用"),
+            app.account,
+        )
+    elif not flush and flush_system:
+        return await send_message(
+            event,
+            MessageChain("参数错误，--system 不能单独使用"),
+            app.account,
+        )
+    elif flush and export:
+        return await send_message(
+            event, MessageChain("参数错误，--flush 与 --export 不能同时使用"), app.account
+        )
+    session = ChatSessionContainer.get_or_create(
+        -int(event.sender)
+        if isinstance(event, FriendMessage)
+        else int(event.sender.group)
+    )
+    if flush:
+        return await session.flush(app, event, flush_system)
+    elif system_prompt:
+        return await session.set_system(app, event, system_prompt)
+    elif export:
+        return (
+            await session.get_chain(app, event, event.quote)
+            if event.quote
+            else await send_message(
+                event, MessageChain("--export 仅能在回复 Chat 消息时使用"), app.account
+            )
+        )
+    else:
+        return await send_message(event, MessageChain("已创建对话会话"), app.account)
+
+
+@listen(GroupMessage)
+@decorate(
+    Switch.check(channel.module),
+    QuotingOrAtMe(one_at=True),  # 限制了只能 at 一个，所以不用再 distribute()
+    Blacklist.check(),
+)
+async def chat_completion_impl_group(
+    app: Ariadne, event: GroupMessage, chain: MessageChain
+):
+    if re.fullmatch(
+        rf"^\s*[{re.escape(''.join(PrefixMatch.get_prefix()))}]+.*$",
+        (text := "".join(plain.display for plain in chain.get(Plain))),
+    ):  # 包含前缀，可能是其他模块触发词，直接 return 掉
+        return
+    if int(event.sender.group) not in ChatSessionContainer.session.keys():
+        return
+    cfg: EricConfig = create(EricConfig)
+    session = ChatSessionContainer.get_or_create(int(event.sender.group))
+    if event.quote and event.quote.sender_id not in cfg.accounts:
+        quote = None
+        with contextlib.suppress(Exception):
+            rebuilt = await RebuiltMessage.from_orm(event.quote.id, event.quote.group_id)
+            text = f"[Context] {rebuilt.message_chain.safe_display} [/Context]" + "\n" + text
+    elif event.quote:
+        quote = event.quote
+    else:
+        quote = None
+    await session.send(app, event, text, quote)
