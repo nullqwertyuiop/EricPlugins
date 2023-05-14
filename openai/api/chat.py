@@ -41,11 +41,15 @@ class ChatResponse(TypedDict):
     choices: list[ChatResponseChoice]
 
 
-class ChatErrorResponse(TypedDict):
+class ChatErrorDetail(TypedDict):
     message: str
     type: str
     param: str
     code: str
+
+
+class ChatErrorResponse(TypedDict):
+    error: ChatErrorDetail
 
 
 class ChatCompletion(OpenAIAPIBase):
@@ -156,7 +160,7 @@ class ChatCompletion(OpenAIAPIBase):
 
     @staticmethod
     def _parse_response(resp: dict) -> ChatResponse | ChatErrorResponse:
-        return ChatErrorResponse(**resp) if resp.get("error") else ChatResponse(**resp)
+        return ChatErrorResponse(**resp) if "error" in resp else ChatResponse(**resp)
 
     async def send(
         self,
@@ -184,17 +188,25 @@ class ChatCompletion(OpenAIAPIBase):
         try:
             uuids.append((user := self.add(ChatEntry(role=role, content=content), previous)))
             data = self._parse_response(await self.call(user, cache_delta))
-            if data.get("type") == "error":
-                if (data["code"] == "context_length_exceeded") and (retries > 0):
-                    return await self.send(
-                        content,
-                        role=role,
-                        retries=retries - 1,
-                        cache_delta=cache_delta - 1,
-                    )
-                raise ValueError(data["message"])
-            uuids.append((reply := self.add(entry := (data["choices"][0]["message"]), node_id=user)))
-            return (user, content), (reply, entry["content"])
+            if "error" not in data:
+                data: ChatResponse
+                uuids.append((reply := self.add(entry := (data["choices"][0]["message"]), node_id=user)))
+                return (user, content), (reply, entry["content"])
+            data: ChatErrorResponse
+            match data["error"]["type"]:
+                case "insufficient_quota":
+                    raise ValueError("OpenAI API 配额不足，请联系管理员。")
+                case "context_length_exceeded":
+                    if retries > 0:
+                        return await self.send(
+                            content,
+                            role=role,
+                            retries=retries - 1,
+                            cache_delta=cache_delta - 1,
+                        )
+                    raise ValueError("对话长度超过限制，请尝试缩减对话内容或清除会话记录。")
+                case _:
+                    raise ValueError("[非预期错误] " + data["error"]["message"])
         except AssertionError as e:
             return (None, content), (None, e.args[0])
         except Exception as e:
