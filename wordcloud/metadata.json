@@ -1,0 +1,17 @@
+{
+    "name": "词云",
+    "version": "0.1.6",
+    "pack": "module.wordcloud",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "生成词云",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

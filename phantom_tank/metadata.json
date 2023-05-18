@@ -1,0 +1,18 @@
+{
+    "name": "幻影坦克",
+    "version": "0.1.1",
+    "pack": "module.phantom_tank",
+    "authors": [
+        "nullqwertyuiop",
+        "SAGIRI-KAWAII"
+    ],
+    "description": "生成幻影坦克图片",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

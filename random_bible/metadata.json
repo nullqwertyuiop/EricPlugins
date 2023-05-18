@@ -1,0 +1,18 @@
+{
+    "name": "随机圣经",
+    "version": "0.1.2",
+    "pack": "module.random_bible",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "",
+    "category": [
+        "utility:实用工具",
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

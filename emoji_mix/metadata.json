@@ -1,0 +1,17 @@
+{
+    "name": "Emoji 合成",
+    "version": "0.1.1",
+    "pack": "module.emoji_mix",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "按照 Emoji 对合成 Emoji",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

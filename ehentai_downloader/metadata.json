@@ -1,0 +1,15 @@
+{
+    "name": "E-hentai 下载器",
+    "version": "0.1.1",
+    "pack": "module.ehentai_downloader",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "提供 E-hentai 的图库下载功能",
+    "category": [],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

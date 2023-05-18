@@ -1,0 +1,524 @@
+[
+    {
+        "name": "Wordle",
+        "version": "0.1.7",
+        "pack": "module.wordle",
+        "authors": [
+            "SAGIRI-kawaii",
+            "I_love_study",
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "Wordle 猜词游戏",
+        "category": [
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 12821452,
+        "files": [
+            "assets/fonts/KarnakPro-Bold.ttf",
+            "assets/words/CET4.json",
+            "assets/words/专八.json",
+            "assets/words/words.txt",
+            "assets/words/考研.json",
+            "assets/words/TOFEL.json",
+            "assets/words/IELTS.json",
+            "assets/words/专四.json",
+            "assets/words/CET6.json",
+            "assets/words/SAT.json",
+            "assets/words/GRE.json",
+            "assets/words/GMAT.json",
+            "config.py",
+            "gb.py",
+            "table.py",
+            "__init__.py",
+            "keyboard.py",
+            "USAGE.md",
+            "waiter.py",
+            "utils.py",
+            "wordle.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "幻影坦克",
+        "version": "0.1.1",
+        "pack": "module.phantom_tank",
+        "authors": [
+            "nullqwertyuiop",
+            "SAGIRI-KAWAII"
+        ],
+        "required": [],
+        "description": "生成幻影坦克图片",
+        "category": [
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 5201,
+        "files": [
+            "__init__.py",
+            "requirements.txt",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "CP 文生成器",
+        "version": "0.1.0",
+        "pack": "module.cp_generator",
+        "authors": [
+            "nullqwertyuiop",
+            "SAGIRI-KAWAII"
+        ],
+        "required": [],
+        "description": "生成特定攻受的文本",
+        "category": [
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 46363,
+        "files": [
+            "assets/cp_data.json",
+            "__init__.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "以图搜图",
+        "version": "0.1.3",
+        "pack": "module.image_searcher",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "基于多引擎的图片搜索",
+        "category": [
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 34618,
+        "files": [
+            "config.py",
+            "__init__.py",
+            "requirements.txt",
+            "USAGE.md",
+            "icon.png",
+            "utils.py",
+            "metadata.json",
+            "engines/google.py",
+            "engines/saucenao.py",
+            "engines/__init__.py",
+            "engines/ascii2d.py",
+            "engines/baidu.py",
+            "engines/ehentai.py"
+        ]
+    },
+    {
+        "name": "流浪地球倒计时",
+        "version": "0.1.0",
+        "pack": "module.the_wandering_earth_counting_down",
+        "authors": [
+            "nullqwertyuiop",
+            "SAGIRI-KAWAII"
+        ],
+        "required": [],
+        "description": "生成流浪地球风格式的倒计时",
+        "category": [
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 3947736,
+        "files": [
+            "assets/fonts/Alte DIN 1451 Mittelschrift gepraegt Regular.ttf",
+            "assets/fonts/字魂59号-创粗黑.ttf",
+            "__init__.py",
+            "requirements.txt",
+            "utils.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "可露希尔聊天室",
+        "version": "0.1.1",
+        "pack": "module.closure_talk",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "生成一仿可露希尔聊天室风格的图片",
+        "category": [
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 47715,
+        "files": [
+            "model/character.py",
+            "model/chat.py",
+            "model/__init__.py",
+            "assets/example.jpg",
+            "assets/css/main.css",
+            "__init__.py",
+            "decorator.py",
+            "USAGE.md",
+            "util.py",
+            "metadata.json",
+            "style.py"
+        ]
+    },
+    {
+        "name": "Emoji 合成",
+        "version": "0.1.1",
+        "pack": "module.emoji_mix",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "按照 Emoji 对合成 Emoji",
+        "category": [
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 7164,
+        "files": [
+            "__init__.py",
+            "util.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "入典",
+        "version": "0.1.8",
+        "pack": "module.make_it_a_quote",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "典",
+        "category": [
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 276182,
+        "files": [
+            "assets/example.jpg",
+            "__init__.py",
+            "USAGE.md",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "吃什么",
+        "version": "0.1.1",
+        "pack": "module.what_to_eat",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "随机抽取餐点，支持自定义抽数",
+        "category": [
+            "utility:实用工具",
+            "food:美食",
+            "random:随机"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 118869,
+        "files": [
+            "assets/foods.txt",
+            "__init__.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "词云",
+        "version": "0.1.6",
+        "pack": "module.wordcloud",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.recorder"
+        ],
+        "description": "生成词云",
+        "category": [
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 8229,
+        "files": [
+            "assets/filter.txt",
+            "__init__.py",
+            "requirements.txt",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "B 站链接解析",
+        "version": "0.1.4",
+        "pack": "module.bilibili_link_resolve",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "发送 B 站链接自动解析内容",
+        "category": [
+            "utility:实用工具",
+            "preview:预览",
+            "network:网络"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 5816,
+        "files": [
+            "__init__.py",
+            "USAGE.md",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "OpenAI",
+        "version": "0.3.1",
+        "pack": "module.openai",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "提供 OpenAI 官方 API 以及逆向 API 的支持",
+        "category": [
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 61500,
+        "files": [
+            "assets/presets.json",
+            "help.py",
+            "config.py",
+            "__init__.py",
+            "requirements.txt",
+            "impl.py",
+            "metadata.json",
+            "api/_base.py",
+            "api/chat.py",
+            "api/__init__.py"
+        ]
+    },
+    {
+        "name": "快捷搜索",
+        "version": "0.1.1",
+        "pack": "module.search_shortcut",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "自己搜",
+        "category": [
+            "network:网络",
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 1704,
+        "files": [
+            "__init__.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "短信转发器",
+        "version": "0.1.1",
+        "pack": "module.sms_forward",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "转发短信",
+        "category": [
+            "network:网络",
+            "utility:实用工具"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 3861,
+        "files": [
+            "config.py",
+            "__init__.py",
+            "util.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "AI 画图",
+        "version": "0.1.10",
+        "pack": "module.ai_draw",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "利用 Stable Diffusion 生成图片",
+        "category": [
+            "utility:实用工具",
+            "network:网络"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 13406,
+        "files": [
+            "config.py",
+            "table.py",
+            "__init__.py",
+            "USAGE.md",
+            "util.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "推特预览",
+        "version": "0.2.9",
+        "pack": "module.twitter_preview",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "发送推特链接自动生成预览图",
+        "category": [
+            "utility:实用工具",
+            "preview:预览"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 18464,
+        "files": [
+            "model/config.py",
+            "model/tweet.py",
+            "model/__init__.py",
+            "model/include.py",
+            "model/error.py",
+            "model/response.py",
+            "logger.py",
+            "var.py",
+            "__init__.py",
+            "requirements.txt",
+            "USAGE.md",
+            "util.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "随机圣经",
+        "version": "0.1.2",
+        "pack": "module.random_bible",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [],
+        "description": "",
+        "category": [
+            "utility:实用工具",
+            "entertainment:娱乐"
+        ],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 4406,
+        "files": [
+            "__init__.py",
+            "metadata.json"
+        ]
+    },
+    {
+        "name": "E-hentai 下载器",
+        "version": "0.1.1",
+        "pack": "module.ehentai_downloader",
+        "authors": [
+            "nullqwertyuiop"
+        ],
+        "required": [
+            "library.module.file_server"
+        ],
+        "description": "提供 E-hentai 的图库下载功能",
+        "category": [],
+        "advanced": {
+            "allow_disable": true,
+            "allow_unload": true,
+            "hidden": false
+        },
+        "size": 11410,
+        "files": [
+            "threshold.py",
+            "config.py",
+            "__init__.py",
+            "USAGE.md",
+            "util.py",
+            "metadata.json"
+        ]
+    }
+]

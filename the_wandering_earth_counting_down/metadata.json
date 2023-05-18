@@ -1,0 +1,18 @@
+{
+    "name": "流浪地球倒计时",
+    "version": "0.1.0",
+    "pack": "module.the_wandering_earth_counting_down",
+    "authors": [
+        "nullqwertyuiop",
+        "SAGIRI-KAWAII"
+    ],
+    "description": "生成流浪地球风格式的倒计时",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

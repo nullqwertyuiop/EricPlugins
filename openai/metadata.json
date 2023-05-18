@@ -1,0 +1,17 @@
+{
+    "name": "OpenAI",
+    "version": "0.3.1",
+    "pack": "module.openai",
+    "authors": [
+        "nullqwertyuiop"
+    ],
+    "description": "提供 OpenAI 官方 API 以及逆向 API 的支持",
+    "category": [
+        "utility:实用工具"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}

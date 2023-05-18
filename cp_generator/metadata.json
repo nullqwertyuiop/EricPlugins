@@ -1,0 +1,18 @@
+{
+    "name": "CP 文生成器",
+    "version": "0.1.0",
+    "pack": "module.cp_generator",
+    "authors": [
+        "nullqwertyuiop",
+        "SAGIRI-KAWAII"
+    ],
+    "description": "生成特定攻受的文本",
+    "category": [
+        "entertainment:娱乐"
+    ],
+    "advanced": {
+        "allow_disable": true,
+        "allow_unload": true,
+        "hidden": false
+    }
+}
