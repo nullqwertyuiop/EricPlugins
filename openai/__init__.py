@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import random
 import re
-from datetime import datetime
 
 import openai
 from creart import it
@@ -37,6 +36,7 @@ from library.util.session_container import SessionContainer
 from library.util.typ import Message
 from module.openai.config import OpenAIConfig
 from module.openai.impl import ChatSessionContainer
+from module.openai.help import chat_help
 
 channel = Channel.current()
 
@@ -316,14 +316,39 @@ async def chatgpt(app: Ariadne, event: GroupMessage):
 
 @listen(GroupMessage, FriendMessage)
 @dispatch(
-    Twilight(
-        PrefixMatch(),
+    CHAT_TWILIGHT := Twilight(
+        PrefixMatch().help(f"{PrefixMatch.get_prefix()[0]}chat"),
         FullMatch("chat"),
-        ArgumentMatch("--set-system", type=str, default="") @ "system_prompt",
-        ArgumentMatch("-f", "--flush", action="store_true", default=False) @ "flush",
-        ArgumentMatch("-s", "--system", action="store_true", default=False)
+        ArgumentMatch("-h", "--help", action="store_true", default=False).help(
+            "获取当前的帮助"
+        )
+        @ "get_help",
+        ArgumentMatch("--set-system", type=str, default=None).help(
+            "输入并替换系统提示，提示内容会显著影响生成结果"
+        )
+        @ "system_prompt",
+        ArgumentMatch("-f", "--flush", action="store_true", default=False).help(
+            "清除当前会话记录"
+        )
+        @ "flush",
+        ArgumentMatch("-s", "--system", action="store_true", default=False).help(
+            "清除当前会话记录，包括系统提示"
+        )
         @ "flush_system",
-        ArgumentMatch("-x", "--export", action="store_true", default=False) @ "export",
+        ArgumentMatch("-x", "--export", action="store_true", default=False).help(
+            "导出一条会话链条"
+        )
+        @ "export",
+        ArgumentMatch("-T", "--timeout", type=int, default=None).help("设置等待超时时间")
+        @ "timeout",
+        ArgumentMatch("-c", "--cache", type=int, default=None).help(
+            "更改缓存区上下文大小，不建议设置过大或过小"
+        )
+        @ "cache",
+        ArgumentMatch("-t", "--temperature", type=float, default=None).help(
+            "更改模型 temperature 值，越低的值会使结果更加贴近上下文，越高的值会使结果更加随机"
+        )
+        @ "temperature",
     )
 )
 @decorate(
@@ -335,19 +360,33 @@ async def chatgpt(app: Ariadne, event: GroupMessage):
 async def chat_completion_init(
     app: Ariadne,
     event: Message,
+    get_help: ArgResult,
     system_prompt: ArgResult,
     flush: ArgResult,
     flush_system: ArgResult,
     export: ArgResult,
+    timeout: ArgResult,
+    cache: ArgResult,
+    temperature: ArgResult,
 ):
-    system_prompt: str = system_prompt.result
+    get_help: bool = get_help.result
+    system_prompt: str | None = system_prompt.result
     flush: bool = flush.result
     flush_system: bool = flush_system.result
     export: bool = export.result
-    if system_prompt != "" and (flush or flush_system or export):
+    timeout: int | None = timeout.result
+    cache: int | None = cache.result
+    temperature: float | None = temperature.result
+    if get_help:
         return await send_message(
             event,
-            MessageChain("参数错误，--set-system 与 --flush/--system/--export 不能同时使用"),
+            MessageChain(Image(data_bytes=await chat_help())),
+            app.account,
+        )
+    if system_prompt is not None and (flush or flush_system or export):
+        return await send_message(
+            event,
+            MessageChain("参数错误，--flush/--system/--export 与其他参数不能同时使用"),
             app.account,
         )
     elif not flush and flush_system:
@@ -367,9 +406,7 @@ async def chat_completion_init(
     )
     if flush:
         return await session.flush(app, event, flush_system)
-    elif system_prompt:
-        return await session.set_system(app, event, system_prompt)
-    elif export:
+    if export:
         return (
             await session.get_chain(app, event, event.quote)
             if event.quote
@@ -377,8 +414,36 @@ async def chat_completion_init(
                 event, MessageChain("--export 仅能在回复 Chat 消息时使用"), app.account
             )
         )
-    else:
-        return await send_message(event, MessageChain("已创建对话会话"), app.account)
+    actions = 0
+    try:
+        if system_prompt is not None:
+            session.instance.system = system_prompt
+            actions += 1
+        if timeout:
+            assert timeout > 15, "超时时间过短"
+            session.instance.timeout = timeout
+            actions += 1
+        if cache:
+            assert cache >= 2, "缓存区大小过小"
+            session.instance.cache_size = cache
+            actions += 1
+        if temperature:
+            assert 0 <= temperature <= 2, "temperature 超出范围"
+            session.instance.temperature = temperature
+            actions += 1
+        return await send_message(
+            event,
+            MessageChain(
+                f"已完成 {actions} 项操作"
+                if actions
+                else f'未给定参数，可发送 "{PrefixMatch.get_prefix()[0]}chat --help" 查看帮助'
+            ),
+            app.account,
+        )
+    except AssertionError as e:
+        return await send_message(
+            event, MessageChain(f"进行操作时出现错误：{str(e)}"), app.account
+        )
 
 
 @listen(GroupMessage)
@@ -404,11 +469,6 @@ async def chat_completion_impl_group(
     def escape(__text: str) -> str:
         return __text.replace("[", "\\[").replace("]", "\\]")
 
-    text = (
-        f"[User {escape(event.sender.name)}] "
-        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {text}"
-    )
-
     session = ChatSessionContainer.get_or_create(int(event.sender.group))
     if event.quote and event.quote.id not in session.mapping:
         # 检查回复消息是不是在 ChatChain 里面，不是的话加入上下文
@@ -424,3 +484,6 @@ async def chat_completion_impl_group(
     else:
         quote = None
     await session.send(app, event, text, quote)
+    await FunctionCall.add_record(
+        channel.module, int(event.sender.group), int(event.sender)
+    )

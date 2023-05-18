@@ -64,20 +64,34 @@ class ChatCompletion(OpenAIAPIBase):
     history: list[ChatNode]
     """ 对话历史，不包含被删除的对话记录 """
 
+    cache_size: int
+    """ 缓存大小 """
+
+    temperature: float
+    """ ChatGPT Temperature """
+
+    timeout: int
+
     _lock: bool = False
     """ 锁定状态 """
 
-    def __init__(self, *, system: str = ""):
+    def __init__(self, *, system: str = "", timeout: int = 30):
         self.system = system
         self.nodes = []
         self.history = []
+        cfg: OpenAIConfig = create(OpenAIConfig)
+        self.cache_size = cfg.chatgpt_cache
+        self.temperature = cfg.chatgpt_temperature
+        self.timeout = timeout
 
     @contextmanager
     def lock(self):
         assert not self._lock, "你先别急，还没说完"
-        self._lock = True
-        yield
-        self._lock = False
+        try:
+            self._lock = True
+            yield
+        finally:
+            self._lock = False
 
     @property
     def latest(self) -> ChatNode:
@@ -101,20 +115,49 @@ class ChatCompletion(OpenAIAPIBase):
         presence_penalty: float = 0,
         frequency_penalty: float = 0,
         logit_bias: dict = None,
+        timeout: int = None,
         **kwargs,
     ):
+        """
+        调用 OpenAI ChatCompletion API
+
+        Args:
+            node_id (str, optional): 上一条对话记录的 UUID，为空则取最后一条. Defaults to None.
+            cache_delta (int, optional): 缓存大小增量. Defaults to 0.
+            model (str, optional): 模型. Defaults to "gpt-3.5-turbo".
+            temperature (float, optional): ChatGPT Temperature. Defaults to None.
+            top_p (float, optional): Top-p. Defaults to 1.
+            n (int, optional): 生成数量. Defaults to 1.
+            stream (bool, optional): 是否流式. Defaults to False.
+            stop (str | list[str], optional): 停止词. Defaults to None.
+            max_tokens (int, optional): 最大生成长度. Defaults to None.
+            presence_penalty (float, optional): Presence Penalty. Defaults to 0.
+            frequency_penalty (float, optional): Frequency Penalty. Defaults to 0.
+            logit_bias (dict, optional): Logit Bias. Defaults to None.
+            timeout (int, optional): 超时. Defaults to 30.
+
+        Returns:
+            ChatResponse: OpenAI ChatCompletion API 返回值
+
+        Raises:
+            AssertionError: 锁定状态
+            TimeoutError: 超时
+        """
         logit_bias = logit_bias or {}  # 防止 OpenAI 报类型错误
         with self.lock():
             cfg: OpenAIConfig = create(OpenAIConfig)
             if temperature is None:
-                temperature = cfg.chatgpt_temperature
+                temperature = self.temperature
             if max_tokens is None:
                 max_tokens = cfg.chatgpt_max_token
+            if timeout is None:
+                timeout = self.timeout
             return await self._call(
+                timeout=timeout,
                 model=model,
                 messages=[ChatEntry(role="system", content=self.system)]
                 + [node["entry"] for node in self.get_chain(node_id)][
-                    -(cfg.chatgpt_cache + cache_delta) :  # noqa
+                    -(self.cache_size + cache_delta) :  # noqa
                 ],
                 temperature=temperature,
                 top_p=top_p,
@@ -209,6 +252,8 @@ class ChatCompletion(OpenAIAPIBase):
                     raise ValueError("[非预期错误] " + data["error"]["message"])
         except AssertionError as e:
             return (None, content), (None, e.args[0])
+        except TimeoutError:
+            return (None, content), (None, "取得回复时发生错误：请求超时")
         except Exception as e:
             logger.exception(e)
             logger.error("[ChatSession] 取得回复时发生错误")
